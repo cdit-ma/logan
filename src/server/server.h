@@ -23,7 +23,7 @@
 
 #include <string>
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <set>
 
 class SQLiteDatabase;
@@ -32,17 +32,14 @@ class ProtoHandler;
 
 class Server{
     public:
-        Server(std::string database_path, std::vector<std::string> addresses);
-        ~Server();
-
+        Server(const std::string& database_path, std::vector<std::string> addresses);
         void AddProtoHandler(ProtoHandler* handler);
-        void Start();
-
+        bool Start();
+        bool Terminate();
     private:
         SQLiteDatabase* database_ = 0;
         zmq::ProtoReceiver* receiver_ = 0;
-        bool started_ = false;
-
+        bool running_ = false;
         std::vector<ProtoHandler*> handler_list_;
 };
 

@@ -23,12 +23,19 @@
 
 #include "../protohandler.h"
 
-#include <map>
+#include <unordered_map>
 #include <set>
 #include <google/protobuf/message_lite.h>
 
 class Table;
 
+namespace re_common{
+    class UserEvent;
+    class LifecycleEvent;
+    class WorkloadEvent;
+    class ComponentUtilizationEvent;
+    class MessageEvent;
+}
 class ModelProtoHandler : public ProtoHandler{
     public:
         ModelProtoHandler();
@@ -41,21 +48,19 @@ class ModelProtoHandler : public ProtoHandler{
         //Table creation
         void CreatePortEventTable();
         void CreateComponentEventTable();
-        void CreateMessageEventTable();
         void CreateUserEventTable();
         void CreateWorkloadEventTable();
         void CreateComponentUtilizationTable();
 
         //Callback functions
-        void ProcessLifecycleEvent(google::protobuf::MessageLite* message);
-        void ProcessMessageEvent(google::protobuf::MessageLite* message);
-        void ProcessUserEvent(google::protobuf::MessageLite* message);
-        void ProcessWorkloadEvent(google::protobuf::MessageLite* message);
-        void ProcessComponentUtilizationEvent(google::protobuf::MessageLite* message);
+        void ProcessLifecycleEvent(const re_common::LifecycleEvent& message);
+        void ProcessUserEvent(const re_common::UserEvent& message);
+        void ProcessWorkloadEvent(const re_common::WorkloadEvent& message);
+        void ProcessComponentUtilizationEvent(const re_common::ComponentUtilizationEvent& message);
 
         //Members
         SQLiteDatabase* database_;
-        std::map<std::string, Table*> table_map_;
+        std::unordered_map<std::string, Table*> table_map_;
         std::set<std::string> registered_nodes_;
 };
 

@@ -31,34 +31,37 @@
 #include "../../re_common/zmq/protoreceiver/protoreceiver.h"
 
 //Types
-#define LOGAN_DECIMAL "DECIMAL"
-#define LOGAN_VARCHAR "VARCHAR"
-#define LOGAN_INT "INTEGER"
+const std::string LOGAN_DECIMAL = "DECIMAL";
+const std::string LOGAN_VARCHAR = "VARCHAR";
+const std::string LOGAN_INT = "INTEGER";
 
 //Common column names
-#define LOGAN_TIMEOFDAY "timeofday"
-#define LOGAN_HOSTNAME "hostname"
-#define LOGAN_COMPONENT_NAME "component_name"
-#define LOGAN_COMPONENT_ID "component_id"
-#define LOGAN_COMPONENT_TYPE "component_type"
-#define LOGAN_PORT_NAME "port_name"
-#define LOGAN_PORT_ID "port_id"
-#define LOGAN_PORT_KIND "port_kind"
-#define LOGAN_PORT_TYPE "port_type"
-#define LOGAN_PORT_MIDDLEWARE "port_middleware"
-#define LOGAN_WORKER_NAME "worker_name"
-#define LOGAN_WORKER_TYPE "worker_type"
-#define LOGAN_EVENT "event"
-#define LOGAN_MESSAGE_ID "id"
-#define LOGAN_NAME "name"
-#define LOGAN_TYPE "type"
+const std::string LOGAN_TIMEOFDAY = "timeofday";
+const std::string LOGAN_HOSTNAME = "hostname";
+const std::string LOGAN_MESSAGE_ID = "id";
+const std::string LOGAN_NAME = "name";
+const std::string LOGAN_TYPE = "type";
+
+//Common column names
+const std::string LOGAN_COMPONENT_NAME = "component_name";
+const std::string LOGAN_COMPONENT_ID = "component_id";
+const std::string LOGAN_COMPONENT_TYPE = "component_type";
+const std::string LOGAN_PORT_NAME = "port_name";
+const std::string LOGAN_PORT_ID = "port_id";
+const std::string LOGAN_PORT_KIND = "port_kind";
+const std::string LOGAN_PORT_TYPE = "port_type";
+const std::string LOGAN_PORT_MIDDLEWARE = "port_middleware";
+const std::string LOGAN_WORKER_NAME = "worker_name";
+const std::string LOGAN_WORKER_TYPE = "worker_type";
+const std::string LOGAN_EVENT = "event";
+
 
 //Model Table names
-#define LOGAN_LIFECYCLE_PORT_TABLE "Model_Lifecycle_EventPort"
-#define LOGAN_LIFECYCLE_COMPONENT_TABLE "Model_Lifecycle_Component"
-#define LOGAN_EVENT_USER_TABLE "Model_Event_User"
-#define LOGAN_EVENT_WORKLOAD_TABLE "Model_Event_Workload"
-#define LOGAN_EVENT_COMPONENT_TABLE "Model_Event_Component"
+const std::string LOGAN_LIFECYCLE_PORT_TABLE = "Model_Lifecycle_EventPort";
+const std::string LOGAN_LIFECYCLE_COMPONENT_TABLE = "Model_Lifecycle_Component";
+const std::string LOGAN_EVENT_USER_TABLE = "Model_Event_User";
+const std::string LOGAN_EVENT_WORKLOAD_TABLE = "Model_Event_Workload";
+const std::string LOGAN_EVENT_COMPONENT_TABLE = "Model_Event_Component";
 
 ModelProtoHandler::ModelProtoHandler() : ProtoHandler(){}
 ModelProtoHandler::~ModelProtoHandler(){}
@@ -73,17 +76,10 @@ void ModelProtoHandler::ConstructTables(SQLiteDatabase* database){
 }
 
 void ModelProtoHandler::BindCallbacks(zmq::ProtoReceiver* receiver){
-    auto ue_callback = std::bind(&ModelProtoHandler::ProcessUserEvent, this, std::placeholders::_1);
-    receiver->RegisterNewProto(re_common::UserEvent::default_instance(), ue_callback);
-
-    auto le_callback = std::bind(&ModelProtoHandler::ProcessLifecycleEvent, this, std::placeholders::_1);
-    receiver->RegisterNewProto(re_common::LifecycleEvent::default_instance(), le_callback);
-
-    auto we_callback = std::bind(&ModelProtoHandler::ProcessWorkloadEvent, this, std::placeholders::_1);
-    receiver->RegisterNewProto(re_common::WorkloadEvent::default_instance(), we_callback);
-
-    auto cu_callback = std::bind(&ModelProtoHandler::ProcessComponentUtilizationEvent, this, std::placeholders::_1);
-    receiver->RegisterNewProto(re_common::ComponentUtilizationEvent::default_instance(), cu_callback);
+    receiver->RegisterProtoCallback<re_common::UserEvent>(std::bind(&ModelProtoHandler::ProcessUserEvent, this, std::placeholders::_1));
+    receiver->RegisterProtoCallback<re_common::LifecycleEvent>(std::bind(&ModelProtoHandler::ProcessLifecycleEvent, this, std::placeholders::_1));
+    receiver->RegisterProtoCallback<re_common::WorkloadEvent>(std::bind(&ModelProtoHandler::ProcessWorkloadEvent, this, std::placeholders::_1));
+    receiver->RegisterProtoCallback<re_common::ComponentUtilizationEvent>(std::bind(&ModelProtoHandler::ProcessComponentUtilizationEvent, this, std::placeholders::_1));
 }
 
 
@@ -201,97 +197,92 @@ void ModelProtoHandler::CreateComponentUtilizationTable(){
     database_->QueueSqlStatement(t->get_table_construct_statement());
 }
 
-void ModelProtoHandler::ProcessLifecycleEvent(google::protobuf::MessageLite* message){
-    re_common::LifecycleEvent* event = (re_common::LifecycleEvent*)message;
-    if(event->has_port() && event->has_component()){
+void ModelProtoHandler::ProcessLifecycleEvent(const re_common::LifecycleEvent& event){
+    if(event.has_port() && event.has_component()){
         //Process port event
         std::cout << "Got port lifecycle event" << std::endl;
         auto ins = table_map_[LOGAN_LIFECYCLE_PORT_TABLE]->get_insert_statement();
-        ins.BindDouble(LOGAN_TIMEOFDAY, event->info().timestamp());
-        ins.BindString(LOGAN_HOSTNAME, event->info().hostname());
-        ins.BindString(LOGAN_COMPONENT_NAME, event->component().name());
-        ins.BindString(LOGAN_COMPONENT_ID, event->component().id());
-        ins.BindString(LOGAN_COMPONENT_TYPE, event->component().type());
-        ins.BindString(LOGAN_PORT_NAME, event->port().name());
-        ins.BindString(LOGAN_PORT_ID, event->port().id());
-        ins.BindString(LOGAN_PORT_KIND, re_common::Port::Kind_Name(event->port().kind()));
-        ins.BindString(LOGAN_PORT_TYPE, event->port().type());
-        ins.BindString(LOGAN_PORT_MIDDLEWARE, event->port().middleware());
-        ins.BindString(LOGAN_EVENT, re_common::LifecycleEvent::Type_Name(event->type()));
+        ins.BindDouble(LOGAN_TIMEOFDAY, event.info().timestamp());
+        ins.BindString(LOGAN_HOSTNAME, event.info().hostname());
+        ins.BindString(LOGAN_COMPONENT_NAME, event.component().name());
+        ins.BindString(LOGAN_COMPONENT_ID, event.component().id());
+        ins.BindString(LOGAN_COMPONENT_TYPE, event.component().type());
+        ins.BindString(LOGAN_PORT_NAME, event.port().name());
+        ins.BindString(LOGAN_PORT_ID, event.port().id());
+        ins.BindString(LOGAN_PORT_KIND, re_common::Port::Kind_Name(event.port().kind()));
+        ins.BindString(LOGAN_PORT_TYPE, event.port().type());
+        ins.BindString(LOGAN_PORT_MIDDLEWARE, event.port().middleware());
+        ins.BindString(LOGAN_EVENT, re_common::LifecycleEvent::Type_Name(event.type()));
 
         database_->QueueSqlStatement(ins.get_statement());
     }
 
-    else if(event->has_component()){
+    else if(event.has_component()){
             auto ins = table_map_[LOGAN_LIFECYCLE_COMPONENT_TABLE]->get_insert_statement();
-            ins.BindDouble(LOGAN_TIMEOFDAY, event->info().timestamp());
-            ins.BindString(LOGAN_HOSTNAME, event->info().hostname());
-            ins.BindString(LOGAN_COMPONENT_NAME, event->component().name());
-            ins.BindString(LOGAN_COMPONENT_ID, event->component().id());
-            ins.BindString(LOGAN_COMPONENT_TYPE, event->component().type());
-            ins.BindString(LOGAN_EVENT, re_common::LifecycleEvent::Type_Name(event->type()));
+            ins.BindDouble(LOGAN_TIMEOFDAY, event.info().timestamp());
+            ins.BindString(LOGAN_HOSTNAME, event.info().hostname());
+            ins.BindString(LOGAN_COMPONENT_NAME, event.component().name());
+            ins.BindString(LOGAN_COMPONENT_ID, event.component().id());
+            ins.BindString(LOGAN_COMPONENT_TYPE, event.component().type());
+            ins.BindString(LOGAN_EVENT, re_common::LifecycleEvent::Type_Name(event.type()));
             database_->QueueSqlStatement(ins.get_statement());
     }
 }
 
-void ModelProtoHandler::ProcessUserEvent(google::protobuf::MessageLite* message){
-
-    re_common::UserEvent* event = (re_common::UserEvent*)message;
+void ModelProtoHandler::ProcessUserEvent(const re_common::UserEvent& event){
     auto ins = table_map_[LOGAN_EVENT_USER_TABLE]->get_insert_statement();
-    ins.BindDouble(LOGAN_TIMEOFDAY, event->info().timestamp());
-    ins.BindString(LOGAN_HOSTNAME, event->info().hostname());
-    ins.BindString(LOGAN_COMPONENT_NAME, event->component().name());
-    ins.BindString(LOGAN_COMPONENT_ID, event->component().id());
-    ins.BindString(LOGAN_COMPONENT_TYPE, event->component().type());
-    ins.BindString("message", event->message());
-    ins.BindString(LOGAN_TYPE, re_common::UserEvent::Type_Name(event->type()));
+    ins.BindDouble(LOGAN_TIMEOFDAY, event.info().timestamp());
+    ins.BindString(LOGAN_HOSTNAME, event.info().hostname());
+    ins.BindString(LOGAN_COMPONENT_NAME, event.component().name());
+    ins.BindString(LOGAN_COMPONENT_ID, event.component().id());
+    ins.BindString(LOGAN_COMPONENT_TYPE, event.component().type());
+    ins.BindString("message", event.message());
+    ins.BindString(LOGAN_TYPE, re_common::UserEvent::Type_Name(event.type()));
     database_->QueueSqlStatement(ins.get_statement());
 }
 
-void ModelProtoHandler::ProcessWorkloadEvent(google::protobuf::MessageLite* message){
-    re_common::WorkloadEvent* event = (re_common::WorkloadEvent*)message;
+void ModelProtoHandler::ProcessWorkloadEvent(const re_common::WorkloadEvent& event){
     auto ins = table_map_[LOGAN_EVENT_WORKLOAD_TABLE]->get_insert_statement();
     //Info
-    ins.BindDouble(LOGAN_TIMEOFDAY, event->info().timestamp());
-    ins.BindString(LOGAN_HOSTNAME, event->info().hostname());
+    ins.BindDouble(LOGAN_TIMEOFDAY, event.info().timestamp());
+    ins.BindString(LOGAN_HOSTNAME, event.info().hostname());
 
     //Component
-    ins.BindString(LOGAN_COMPONENT_ID, event->component().id());
-    ins.BindString(LOGAN_COMPONENT_NAME, event->component().name());
-    ins.BindString(LOGAN_COMPONENT_TYPE, event->component().type());
+    ins.BindString(LOGAN_COMPONENT_ID, event.component().id());
+    ins.BindString(LOGAN_COMPONENT_NAME, event.component().name());
+    ins.BindString(LOGAN_COMPONENT_TYPE, event.component().type());
 
     //Workload
-    ins.BindString(LOGAN_WORKER_NAME, event->name());
-    ins.BindInt("workload_id", event->id());
-    ins.BindString(LOGAN_WORKER_TYPE, event->type());
-    ins.BindString("function", event->function());
-    ins.BindString("event_type", re_common::WorkloadEvent::Type_Name(event->event_type()));
-    ins.BindString("args", event->args());
+    ins.BindString(LOGAN_WORKER_NAME, event.name());
+    ins.BindInt("workload_id", event.id());
+    ins.BindString(LOGAN_WORKER_TYPE, event.type());
+    ins.BindString("function", event.function());
+    ins.BindString("event_type", re_common::WorkloadEvent::Type_Name(event.event_type()));
+    ins.BindString("args", event.args());
     database_->QueueSqlStatement(ins.get_statement());
 }
 
-void ModelProtoHandler::ProcessComponentUtilizationEvent(google::protobuf::MessageLite* message){
-    re_common::ComponentUtilizationEvent* event = (re_common::ComponentUtilizationEvent*)message;
+void ModelProtoHandler::ProcessComponentUtilizationEvent(const re_common::ComponentUtilizationEvent& event){
     auto ins = table_map_[LOGAN_EVENT_COMPONENT_TABLE]->get_insert_statement();
 
     //Info
-    ins.BindDouble(LOGAN_TIMEOFDAY, event->info().timestamp());
-    ins.BindString(LOGAN_HOSTNAME, event->info().hostname());
+    ins.BindDouble(LOGAN_TIMEOFDAY, event.info().timestamp());
+    ins.BindString(LOGAN_HOSTNAME, event.info().hostname());
 
     //Component
-    ins.BindString(LOGAN_COMPONENT_NAME, event->component().name());
-    ins.BindString(LOGAN_COMPONENT_ID, event->component().id());
-    ins.BindString(LOGAN_COMPONENT_TYPE, event->component().type());
+    ins.BindString(LOGAN_COMPONENT_NAME, event.component().name());
+    ins.BindString(LOGAN_COMPONENT_ID, event.component().id());
+    ins.BindString(LOGAN_COMPONENT_TYPE, event.component().type());
 
     //Port
-    ins.BindString(LOGAN_PORT_NAME, event->port().name());
-    ins.BindString(LOGAN_PORT_ID, event->port().id());
-    ins.BindString(LOGAN_PORT_KIND, re_common::Port::Kind_Name(event->port().kind()));
-    ins.BindString(LOGAN_PORT_TYPE, event->port().type());
-    ins.BindString(LOGAN_PORT_MIDDLEWARE, event->port().middleware());
+    ins.BindString(LOGAN_PORT_NAME, event.port().name());
+    ins.BindString(LOGAN_PORT_ID, event.port().id());
+    ins.BindString(LOGAN_PORT_KIND, re_common::Port::Kind_Name(event.port().kind()));
+    ins.BindString(LOGAN_PORT_TYPE, event.port().type());
+    ins.BindString(LOGAN_PORT_MIDDLEWARE, event.port().middleware());
 
-    ins.BindInt("port_event_id", event->port_event_id());
-    ins.BindString(LOGAN_TYPE, re_common::ComponentUtilizationEvent::Type_Name(event->type()));
+    ins.BindInt("port_event_id", event.port_event_id());
+    ins.BindString(LOGAN_TYPE, re_common::ComponentUtilizationEvent::Type_Name(event.type()));
 
     database_->QueueSqlStatement(ins.get_statement());
 }

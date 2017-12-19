@@ -23,11 +23,16 @@
 
 #include "../protohandler.h"
 
-#include <map>
+#include <unordered_map>
 #include <set>
 #include <google/protobuf/message_lite.h>
 
 class Table;
+
+namespace re_common{
+    class SystemInfo;
+    class SystemStatus;
+}
 
 class HardwareProtoHandler : public ProtoHandler{
     public:
@@ -50,12 +55,12 @@ class HardwareProtoHandler : public ProtoHandler{
         void CreateProcessInfoTable();
 
         //Callback functions
-        void ProcessSystemStatus(google::protobuf::MessageLite* status);
-        void ProcessOneTimeSystemInfo(google::protobuf::MessageLite* info);
+        void ProcessSystemStatus(const re_common::SystemStatus& status);
+        void ProcessOneTimeSystemInfo(const re_common::SystemInfo& info);
 
         //Members
         SQLiteDatabase* database_;
-        std::map<std::string, Table*> table_map_;
+        std::unordered_map<std::string, Table*> table_map_;
         std::set<std::string> registered_nodes_;
 };
 
