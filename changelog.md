@@ -20,7 +20,7 @@
 ## Bug Fixes:
 * Logan handles Port Kind correctly in the table model events
 
----
+---`
 
 # logan v1.1.0
 
