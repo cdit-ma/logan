@@ -1,3 +1,10 @@
+# logan v1.4.0
+
+## Bug Fixes:
+* Fixed memory leaks in logan
+
+---
+
 # logan v1.3.2
 
 ## Resolved JIRA Issues:
