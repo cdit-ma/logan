@@ -2,24 +2,42 @@
 #include <pqxx/pqxx>
 
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <memory>
 
+#include <signal.h>
+
 #include <boost/program_options.hpp>
+
+#include <google/protobuf/util/json_util.h>
 
 #include <re_common/zmq/protowriter/protowriter.h>
 #include <re_common/zmq/protoreceiver/protoreceiver.h>
 #include <re_common/proto/modelevent/modelevent.pb.h>
 
+#include <re_common/util/execution.hpp>
+
 #include "aggregationserver.h"
 #include "aggregationprotohandler.h"
 #include "databaseclient.h"
+#include "experimenttracker.h"
+
+
+Execution execution;
+
+void signal_handler (int signal_value){
+    execution.Interrupt();
+}
 
 
 const int success_return_val = 0;
 const int error_return_val = 1;
 
 int main(int argc, char** argv) {
+    //Handle the SIGINT/SIGTERM signal
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
 
     std::stringstream conn_string_stream;
     conn_string_stream << "dbname = postgres user = postgres ";
@@ -66,53 +84,57 @@ int main(int argc, char** argv) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
 
-    auto database_client = std::unique_ptr<DatabaseClient>(new DatabaseClient(conn_string_stream.str()));
-    auto aggregation_protohandler = std::unique_ptr<AggregationProtoHandler>(new AggregationProtoHandler(*database_client));
+    auto database_client = std::shared_ptr<DatabaseClient>(new DatabaseClient(conn_string_stream.str()));
+    auto experiment_tracker = std::shared_ptr<ExperimentTracker>(new ExperimentTracker(database_client));
+    auto aggregation_protohandler = std::unique_ptr<AggregationProtoHandler>(new AggregationProtoHandler(database_client, experiment_tracker));
 
     aggregation_protohandler->BindCallbacks(*receiver);
 
     
+    // Read JSON into protobuf
+    std::ifstream json_file("../bin/out.json", std::ifstream::in);
+    std::ostringstream json_contents;
+    json_contents << json_file.rdbuf();
+    auto control_message = new NodeManager::ControlMessage();
+    google::protobuf::util::JsonStringToMessage(json_contents.str(), control_message);
 
+    // Send the control message off
+    writer->PushMessage(control_message);
 
-    for(auto i = 0; i < 10; i++){
+    // Create userevents that just contain "TestTable" with 0~4 appended on the end
+    /*for(auto i = 0; i < 4; i++){
         auto message = new re_common::UserEvent();
         message->set_message("TestTable" + std::to_string(i));
         writer->PushMessage(message);
-    }
+    }*/
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    delete control_message;
+
+    execution.Start();
+
+    receiver->Terminate();
+    
+    std::cout << "Shutting down" << std::endl;
+
     return 0;
-
-
-
-
-    try {
-        pqxx::connection connection(conn_string_stream.str());
-
-        if (connection.is_open()) {
-            std::cout << "We got ourselves a database" << std::endl;
-        } else {
-            std::cout << "Couldnt connect to database" << std::endl;
-            return error_return_val;
-        }
-
-        pqxx::work transaction(connection);
-        transaction.exec(
-            "CREATE TABLE TestTable (" \
-            "TestTableID INT PRIMARY KEY    NOT NULL," \
-            "TestColumn             TEXT    NOT NULL)" 
-        );
-        transaction.commit();
-
-        std::cout << "All work done!" << std::endl;
-
-    } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
-        return error_return_val;
-    }
-
-    return success_return_val;
 }
 
+
+void AggregationServer::StimulatePorts(DatabaseClient& database) {
+    auto&& port_id_results = database.GetValues(
+        "Port",
+        {"PortID"}
+    );
+
+    auto port_message = new re_common::LifecycleEvent();
+
+    for (const auto& port_id_row : port_id_results) {
+        int port_id = port_id_row["PortID"].as<int>();
+        port_message->set_type(re_common::LifecycleEvent::CONFIGURED);
+        // TODO: Flesh out the rest of the message and send
+    }
+}
 
 void AggregationServer::LogCPUStatus(const std::string& timeofday, const std::string& hostname,
                     int sequence_number, int core_id, double core_utilisation) {

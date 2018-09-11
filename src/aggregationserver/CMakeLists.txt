@@ -16,12 +16,16 @@ set(SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/aggregationserver.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/aggregationprotohandler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/databaseclient.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/experimenttracker.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp
 )
 
 set(HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/aggregationserver.h
     ${CMAKE_CURRENT_SOURCE_DIR}/aggregationprotohandler.h
 	${CMAKE_CURRENT_SOURCE_DIR}/databaseclient.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/experimenttracker.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
 )
 
 # Construct a shared library
@@ -57,6 +61,7 @@ target_include_directories(${PROJ_NAME} PRIVATE ${RE_COMMON_SOURCE_DIR})
 target_link_libraries(${PROJ_NAME} zmq_protoreceiver)
 target_link_libraries(${PROJ_NAME} zmq_protowriter)
 target_link_libraries(${PROJ_NAME} re_common_proto_modelevent)
+target_link_libraries(${PROJ_NAME} re_common_proto_control)
 target_link_libraries(${PROJ_NAME} pqxx)
 target_link_libraries(${PROJ_NAME} ${Boost_PROGRAM_OPTIONS_LIBRARY})
 target_link_libraries(${PROJ_NAME} ${PROTOBUF_LIBRARIES})
