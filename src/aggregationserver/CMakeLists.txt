@@ -15,6 +15,9 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../cmakevars.h.in ${CMAKE_CURRENT_BIN
 set(SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/aggregationserver.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/aggregationprotohandler.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodemanagerprotohandler.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/modeleventprotohandler.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/systemstatusprotohandler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/databaseclient.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/experimenttracker.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp
@@ -23,6 +26,9 @@ set(SOURCES
 set(HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/aggregationserver.h
     ${CMAKE_CURRENT_SOURCE_DIR}/aggregationprotohandler.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodemanagerprotohandler.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/modeleventprotohandler.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/systemstatusprotohandler.h
 	${CMAKE_CURRENT_SOURCE_DIR}/databaseclient.h
     ${CMAKE_CURRENT_SOURCE_DIR}/experimenttracker.h
     ${CMAKE_CURRENT_SOURCE_DIR}/utils.h

@@ -19,7 +19,9 @@
 #include <re_common/util/execution.hpp>
 
 #include "aggregationserver.h"
-#include "aggregationprotohandler.h"
+#include "nodemanagerprotohandler.h"
+#include "modeleventprotohandler.h"
+#include "systemstatusprotohandler.h"
 #include "databaseclient.h"
 #include "experimenttracker.h"
 
@@ -86,9 +88,14 @@ int main(int argc, char** argv) {
 
     auto database_client = std::shared_ptr<DatabaseClient>(new DatabaseClient(conn_string_stream.str()));
     auto experiment_tracker = std::shared_ptr<ExperimentTracker>(new ExperimentTracker(database_client));
-    auto aggregation_protohandler = std::unique_ptr<AggregationProtoHandler>(new AggregationProtoHandler(database_client, experiment_tracker));
+    
+    auto nodemanager_protohandler = std::unique_ptr<AggregationProtoHandler>(new NodeManagerProtoHandler(database_client, experiment_tracker));
+    auto modelevent_protohandler = std::unique_ptr<AggregationProtoHandler>(new ModelEventProtoHandler(database_client, experiment_tracker));
+    auto systemstatus_protohandler = std::unique_ptr<AggregationProtoHandler>(new SystemStatusProtoHandler(database_client, experiment_tracker));
 
-    aggregation_protohandler->BindCallbacks(*receiver);
+    nodemanager_protohandler->BindCallbacks(*receiver);
+    modelevent_protohandler->BindCallbacks(*receiver);
+    systemstatus_protohandler->BindCallbacks(*receiver);
 
     
     // Read JSON into protobuf
@@ -108,8 +115,8 @@ int main(int argc, char** argv) {
         writer->PushMessage(message);
     }*/
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    delete control_message;
+    
+    //delete control_message;
 
     execution.Start();
 

@@ -45,8 +45,6 @@ int DatabaseClient::InsertValues(const std::string& table_name,
     std::string id_column = table_name + "ID";
     int id_value = -1;
 
-    std::cout << "BLEHHHHHHH" << std::endl;
-
     query_stream << "INSERT INTO " << table_name;
     if (columns.size() > 0) {
         query_stream << " (";
@@ -55,8 +53,6 @@ int DatabaseClient::InsertValues(const std::string& table_name,
         }
         query_stream << columns.at(columns.size()-1) << ')';
     }
-
-    std::cout << "BLEHHHHHHH" << std::endl;
 
     query_stream << std::endl << " VALUES (";
     for (int i=0; i<values.size()-1; i++) {
@@ -91,8 +87,6 @@ int DatabaseClient::InsertValues(const std::string& table_name,
 
 int DatabaseClient::InsertValuesUnique(const std::string& table_name,
                             const std::vector<std::string>& columns, const std::vector<std::string>& values, const std::vector<std::string>& unique_cols) {
-
-                                std::cout << "performing unique insert" << std::endl;
 
     std::string id_column = table_name + "ID";
     int id_value = -1;
@@ -145,15 +139,9 @@ int DatabaseClient::InsertValuesUnique(const std::string& table_name,
     std::cout << query_stream.str() << std::endl;
 
     try {
-    std::cerr << "Aabout to make me a transaction" << std::endl;
-    std::cerr << connection_.is_open() << std::endl;
         pqxx::work transaction(connection_, "InsertValuesUniqueTransaction");
-    std::cerr << transaction.name() << std::endl;
         auto&& result = transaction.exec(query_stream.str());
-    std::cerr << "About to perform commit of query:" << std::endl;
         transaction.commit();
-
-        std::cerr << "Transaction successfully committed!" << std::endl;
         
         std::string lower_id_column(id_column);
         std::transform(lower_id_column.begin(), lower_id_column.end(), lower_id_column.begin(), ::tolower);
@@ -161,20 +149,15 @@ int DatabaseClient::InsertValuesUnique(const std::string& table_name,
 
         for (const auto& row : result) {
             for (int colnum=0; colnum < row.size(); colnum++) {
-                std::cout << "WOOOOOOP " << result.column_name(colnum) << std::endl;
                 if (colnum == id_colnum) {
-                    std::cout << "Actually found the returnable id column" << std::endl;
                     id_value = row.at(colnum).as<int>();
                     return id_value;
                 }
             }
         }
     } catch (const std::exception& e)  {
-        std::cerr << "An exception occurred" << std::endl;
         std::cerr << e.what() << std::endl;
         throw;
-    } catch (...) {
-        std::cerr << "OMG LADS" << std::endl;
     }
     /*
 
@@ -192,8 +175,6 @@ int DatabaseClient::InsertValuesUnique(const std::string& table_name,
     LIMIT  1;
 
     */
-
-   std::cout << "WE THE SADDEST BOIS" << std::endl;
 
    return id_value;
 }
