@@ -5,9 +5,9 @@
 #include "databaseclient.h"
 #include "experimenttracker.h"
 
-#include <re_common/zmq/protoreceiver/protoreceiver.h>
+#include <zmq/protoreceiver/protoreceiver.h>
 
-#include <re_common/proto/controlmessage/helper.h>
+#include <proto/controlmessage/helper.h>
 
 #include <functional>
 
@@ -20,7 +20,7 @@ void NodeManagerProtoHandler::BindCallbacks(zmq::ProtoReceiver& receiver) {
 
 void NodeManagerProtoHandler::ProcessEnvironmentMessage(const NodeManager::EnvironmentMessage& message) {
     switch (message.type()) {
-        case NodeManager::EnvironmentMessage::UPDATE_DEPLOYMENT:    // For the moment we expect
+        case NodeManager::EnvironmentMessage::CONFIGURE_EXPERIMENT:
         {
             ProcessControlMessage(message.control_message());
             return;

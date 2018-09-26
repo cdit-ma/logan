@@ -3,7 +3,7 @@
 
 #include "aggregationprotohandler.h"
 
-#include <re_common/proto/controlmessage/controlmessage.pb.h>
+#include <proto/controlmessage/controlmessage.pb.h>
 
 class NodeManagerProtoHandler : public AggregationProtoHandler {
 public:

@@ -5,7 +5,7 @@
 #include "databaseclient.h"
 #include "experimenttracker.h"
 
-#include <re_common/zmq/protoreceiver/protoreceiver.h>
+#include <zmq/protoreceiver/protoreceiver.h>
 
 #include <functional>
 

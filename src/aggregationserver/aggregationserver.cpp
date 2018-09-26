@@ -14,9 +14,9 @@
 
 #include <google/protobuf/util/json_util.h>
 
-#include <re_common/zmq/protowriter/protowriter.h>
-#include <re_common/zmq/protoreceiver/protoreceiver.h>
-#include <re_common/proto/modelevent/modelevent.pb.h>
+#include <zmq/protowriter/protowriter.h>
+#include <zmq/protoreceiver/protoreceiver.h>
+#include <proto/modelevent/modelevent.pb.h>
 
 #include "utils.h"
 
@@ -86,15 +86,15 @@ int main(int argc, char** argv) {
     std::ifstream json_file("../bin/out.json", std::ifstream::in);
     std::ostringstream json_contents;
     json_contents << json_file.rdbuf();
-    auto control_message = new NodeManager::ControlMessage();
-    google::protobuf::util::JsonStringToMessage(json_contents.str(), control_message);
+    auto control_message = std::unique_ptr<NodeManager::ControlMessage>(new NodeManager::ControlMessage());
+    google::protobuf::util::JsonStringToMessage(json_contents.str(), control_message.get());
 
-    NodeManager::ControlMessage cm_copy(*control_message);
+    std::unique_ptr<NodeManager::ControlMessage> cm_copy(new NodeManager::ControlMessage(*control_message));
 
     // Send the control message off
-    writer->PushMessage(control_message);
+    writer->PushMessage(std::move(control_message));
 
-    const auto& lifecycleEvents = aggServer->GenerateLifecyclesFromControlMessage(cm_copy);
+    const auto& lifecycleEvents = aggServer->GenerateLifecyclesFromControlMessage(*cm_copy);
 
     std::cout << "Number of events: " << lifecycleEvents.size() << std::endl;
 
@@ -256,10 +256,10 @@ void AggregationServer::StimulatePorts(const std::vector<re_common::LifecycleEve
             for (const auto& event : events) {
                 if (!event.has_port()) continue;
                 if (event.port().name() == port_name) {
-                    re_common::LifecycleEvent* configured_event = new re_common::LifecycleEvent(event);
+                    auto configured_event = std::unique_ptr<re_common::LifecycleEvent>(new re_common::LifecycleEvent(event));
                     configured_event->set_type(re_common::LifecycleEvent::CONFIGURED);
                     configured_event->mutable_info()->set_timestamp(2.0);
-                    bool success = writer.PushMessage(configured_event);
+                    bool success = writer.PushMessage(std::move(configured_event));
                     if (!success) {
                         std::cout << "Something went wrong pushing message" << std::endl;
                     }

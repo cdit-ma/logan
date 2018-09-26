@@ -3,7 +3,7 @@
 
 #include "string"
 
-#include <re_common/util/execution.hpp>
+#include <util/execution.hpp>
 
 class DatabaseClient;
 
@@ -28,6 +28,7 @@ public:
             const std::string& database_ip,
             const std::string& password);
     
+    ~AggregationServer() {receiver.Terminate();};
 
     void LogComponentLifecycleEvent(const std::string& timeofday, const std::string& hostname, int id, int core_id, double core_utilisation);
     
@@ -50,8 +51,8 @@ public:
 
 private:
     
-    std::shared_ptr<DatabaseClient> database_client;
     zmq::ProtoReceiver receiver;
+    std::shared_ptr<DatabaseClient> database_client;
 
     std::unique_ptr<AggregationProtoHandler> nodemanager_protohandler;
     std::unique_ptr<AggregationProtoHandler> modelevent_protohandler;

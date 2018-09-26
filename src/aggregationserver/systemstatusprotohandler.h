@@ -3,7 +3,7 @@
 
 #include "aggregationprotohandler.h"
 
-#include <re_common/proto/systemstatus/systemstatus.pb.h>
+#include <proto/systemstatus/systemstatus.pb.h>
 
 class SystemStatusProtoHandler : public AggregationProtoHandler {
 public:

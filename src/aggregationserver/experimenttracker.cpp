@@ -3,7 +3,7 @@
 #include <iostream>
 #include <sstream>
 
-#include <re_common/proto/controlmessage/controlmessage.pb.h>
+#include <proto/controlmessage/controlmessage.pb.h>
 
 #include "databaseclient.h"
 

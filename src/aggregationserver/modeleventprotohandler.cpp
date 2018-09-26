@@ -5,8 +5,8 @@
 #include "databaseclient.h"
 #include "experimenttracker.h"
 
-#include <re_common/zmq/protoreceiver/protoreceiver.h>
-#include <re_common/proto/modelevent/modelevent.pb.h>
+#include <zmq/protoreceiver/protoreceiver.h>
+#include <proto/modelevent/modelevent.pb.h>
 
 #include <functional>
 

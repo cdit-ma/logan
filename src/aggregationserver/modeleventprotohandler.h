@@ -3,7 +3,7 @@
 
 #include "aggregationprotohandler.h"
 
-#include <re_common/proto/modelevent/modelevent.pb.h>
+#include <proto/modelevent/modelevent.pb.h>
 
 class ModelEventProtoHandler : public AggregationProtoHandler {
 public:
