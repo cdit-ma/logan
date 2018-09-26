@@ -30,9 +30,9 @@
 
 #include "sigarsysteminfo.h"
 
-#include <re_common/proto/systemstatus/systemstatus.pb.h>
-#include <re_common/zmq/protowriter/cachedprotowriter.h>
-#include <re_common/zmq/protowriter/monitor.h>
+#include <proto/systemstatus/systemstatus.pb.h>
+#include <zmq/protowriter/cachedprotowriter.h>
+#include <zmq/protowriter/monitor.h>
 #include <google/protobuf/util/json_util.h>
 
 //Constructor used for print only call
@@ -172,9 +172,9 @@ void LogController::LogThread(const std::string& publisher_endpoint, const doubl
                 //Whenever a new server connects, send one time information, using our client address as the topic
                 std::lock_guard<std::mutex> lock(one_time_mutex_);
                 if(send_onetime_info_){
-                    auto message = system_.GetSystemInfo(listener_id_);
+                    auto message = std::unique_ptr<google::protobuf::MessageLite>(system_.GetSystemInfo(listener_id_));
                     if(message){
-                        writer->PushMessage(message);
+                        writer->PushMessage(std::move(message));
                         send_onetime_info_ = false;
                     }
                 }
@@ -184,9 +184,9 @@ void LogController::LogThread(const std::string& publisher_endpoint, const doubl
                 system_.Update();
                 //Send the tick'd information to all servers
                 
-                auto message = system_.GetSystemStatus(listener_id_);
+                auto message = std::unique_ptr<google::protobuf::MessageLite>(system_.GetSystemStatus(listener_id_));
                 if(message){
-                    writer->PushMessage(message);
+                    writer->PushMessage(std::move(message));
                 }
             }
 

@@ -8,6 +8,13 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(LOGAN_SRC_PATH "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
+set(LOGAN_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
+set(LOGAN_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/src")
+
+set(LOGAN_SOURCE_DIR "${LOGAN_SOURCE_DIR}" PARENT_SCOPE)
+set(LOGAN_BINARY_DIR "${LOGAN_BINARY_DIR}" PARENT_SCOPE)
+
+
 get_directory_property(IS_SUB_REPO PARENT_DIRECTORY)
 
 # Only set this if we aren't a sub repo
@@ -41,7 +48,7 @@ if(NOT IS_SUB_REPO)
 	endif()
 endif()
 
-SET(LOGAN_VERSION "3.1.5")
+SET(LOGAN_VERSION "3.2.0")
 
 #Add Options for building projects, default to build everything
 option(BUILD_SERVER "Build logan_server" ON)
