@@ -36,7 +36,11 @@ void ModelEventProtoHandler::ProcessUserEvent(const re_common::UserEvent& messag
 void ModelEventProtoHandler::ProcessLifecycleEvent(const re_common::LifecycleEvent& message){
     if (message.has_component()) {
         if (message.has_port()) {
-            InsertPortLifecycleEvent(message.info(), message.type(), message.component(), message.port());
+            try {
+                InsertPortLifecycleEvent(message.info(), message.type(), message.component(), message.port());
+            } catch (const std::exception& e) {
+                std::cerr << e.what() << std::endl;
+            }
         } else {
             InsertComponentLifecycleEvent(message.info(), message.type(), message.component());
         }
@@ -77,7 +81,7 @@ void ModelEventProtoHandler::InsertComponentLifecycleEvent(const re_common::Info
 
     std::vector<std::string> columns = {
         "ComponentInstanceID",
-        "TimeStamp",
+        "SampleTime",
         "Type"
     };
 
@@ -96,13 +100,13 @@ void ModelEventProtoHandler::InsertPortLifecycleEvent(const re_common::Info& inf
 
     std::vector<std::string> columns = {
         "PortID",
-        "TimeStamp",
+        "SampleTime",
         "Type"
     };
 
     std::vector<std::string> values;
     values.emplace_back(std::to_string(GetPortID(port, component, info.experiment_name())));
-    values.emplace_back(AggServer::FormatTimestamp(info.timestamp()));
+    values.emplace_back(database_->EscapeString(AggServer::FormatTimestamp(info.timestamp())));
     values.emplace_back(std::to_string(type));
 
     database_->InsertValues("PortLifecycleEvent", columns, values);
@@ -113,36 +117,54 @@ void ModelEventProtoHandler::InsertPortLifecycleEvent(const re_common::Info& inf
 int ModelEventProtoHandler::GetComponentInstanceID(const re_common::Component& component_instance, const std::string& experiment_name) {
     int component_id = GetComponentID(component_instance.type(), experiment_name);
 
-    std::stringstream condition_stream;
-    condition_stream << "ComponentID = " << component_id << ", Name = " << component_instance.name();
+    std::string&& comp_id = database_->EscapeString(std::to_string(component_id));
+    std::string&& path = database_->EscapeString(component_instance.id()); // Needs to be updated to use the proper path
 
-    database_->GetValues("ComponentInstance", {"ComponentInstanceID"}, condition_stream.str());
+    std::stringstream condition_stream;
+    condition_stream << "ComponentID = " << comp_id << " AND Path = " << path; 
+
+    return database_->GetID("ComponentInstance", condition_stream.str());
 }
 
 
 int ModelEventProtoHandler::GetPortID(const re_common::Port& port, const re_common::Component& component, const std::string& experiment_name) {
 
     int component_instance_id = GetComponentInstanceID(component, experiment_name);
+    
+    std::string&& comp_inst_id = database_->EscapeString(std::to_string(component_instance_id));
+    std::string&& name = database_->EscapeString(port.name());
 
     std::stringstream condition_stream;
-    condition_stream << "ComponentInstanceID = " << component_instance_id << ", Name = " << port.name();
+    condition_stream << "ComponentInstanceID = " << comp_inst_id << " AND Name = " << name;
 
-    database_->GetValues("Port", {"PortID"}, condition_stream.str());
+    return database_->GetID("Port", condition_stream.str());
 }
 
 int ModelEventProtoHandler::GetWorkerInstanceID(const re_common::Component& component, const std::string& worker_name, const std::string& experiment_name) {
 
     int component_instance_id = GetComponentInstanceID(component, experiment_name);
 
-    std::stringstream condition_stream;
-    condition_stream << "ComponentInstanceID = " << component_instance_id << ", Name = " << worker_name;
+    std::string&& comp_inst_id = database_->EscapeString(std::to_string(component_instance_id));
+    std::string&& name = database_->EscapeString(worker_name);
 
-    database_->GetValues("WorkerInstance", {"WorkerInstanceID"}, condition_stream.str());
+    std::stringstream condition_stream;
+    condition_stream << "ComponentInstanceID = " << comp_inst_id << " AND Name = " << name;
+
+    return database_->GetID("WorkerInstance", condition_stream.str());
 }
 
 int ModelEventProtoHandler::GetComponentID(const std::string& name, const std::string& experiment_name) {
     std::stringstream condition_stream;
-    condition_stream << "Name = " << name << ", ExperimentRunID = (SELECT ExperimentRunID FROM ExperimentRun WHERE (SELECT ExperimentID FROM Experiment WHERE Name = " << experiment_name << " ));";
+    condition_stream <<
+    "Name = " << database_->EscapeString(name) << " AND ExperimentRunID = (\
+        SELECT ExperimentRunID \
+        FROM ExperimentRun \
+        WHERE ExperimentID = (\
+            SELECT ExperimentID \
+            FROM Experiment \
+            WHERE Name = " << database_->EscapeString(experiment_name) << " \
+        )\
+    )";
 
-    database_->GetValues("Component", {"ComponentID"}, condition_stream.str());
+    return database_->GetID("Component", condition_stream.str());
 }

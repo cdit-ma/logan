@@ -103,9 +103,9 @@ void NodeManagerProtoHandler::ProcessComponent(const NodeManager::Component& mes
     );
 
     std::string full_location;
-    for (const std::string& str : message.location()) {
+    /*for (const std::string& str : message.location()) {
         full_location.append(str).append("/");
-    }
+    }*/
     /*std::transform(
         message.location().begin(), message.location().end(),
         message.replicate_indices().begin(), message.replicate_indices().end(),
@@ -114,13 +114,16 @@ void NodeManagerProtoHandler::ProcessComponent(const NodeManager::Component& mes
             return true;
         }
     );*/
-    auto loc_iter = message.location().begin();
+    /*auto loc_iter = message.location().begin();
     auto rep_iter = message.replicate_indices().begin();
     while (loc_iter != message.location().end() || rep_iter != message.replicate_indices().end()) {
         full_location.append(*loc_iter).append("_").append(std::to_string(*rep_iter));
         loc_iter++;
         rep_iter++;
-    }
+    }*/
+    auto&& location_vec = std::vector<std::string>(message.location().begin(), message.location().end());
+    auto&& replication_vec = std::vector<int>(message.replicate_indices().begin(), message.replicate_indices().end());
+    full_location = AggServer::GetFullLocation(location_vec, replication_vec);
 
     int component_instance_id = database_->InsertValuesUnique(
         "ComponentInstance",

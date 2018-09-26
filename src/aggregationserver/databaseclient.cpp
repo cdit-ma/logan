@@ -27,6 +27,8 @@ void DatabaseClient::CreateTable(const std::string& table_name,
     query_stream << last_col->first << " " << last_col->second << std::endl;
     query_stream << ")" << std::endl;
 
+    std::lock_guard<std::mutex> conn_guard(conn_mutex_);
+
     try {
         pqxx::work transaction(connection_, "CreateTableTransaction");
         transaction.exec(query_stream.str());
@@ -61,6 +63,7 @@ int DatabaseClient::InsertValues(const std::string& table_name,
     query_stream << values.at(values.size()-1) << ")" << std::endl;
     query_stream << "RETURNING " << id_column << ";" << std::endl;
 
+    std::lock_guard<std::mutex> conn_guard(conn_mutex_);
 
     try {
         pqxx::work transaction(connection_, "InsertValuesTransaction");
@@ -73,7 +76,6 @@ int DatabaseClient::InsertValues(const std::string& table_name,
 
         for (const auto& row : result) {
             for (int colnum=0; colnum < row.size(); colnum++) {
-                std::cout << "WOOOOOOP " << result.column_name(colnum) << std::endl;
                 if (colnum == id_colnum) {
                     id_value = row[colnum].as<int>();
                     return id_value;
@@ -82,6 +84,7 @@ int DatabaseClient::InsertValues(const std::string& table_name,
         }
     } catch (const std::exception& e)  {
         std::cerr << e.what() << std::endl;
+        throw;
     }
 }
 
@@ -103,7 +106,6 @@ int DatabaseClient::InsertValuesUnique(const std::string& table_name,
             for (int j=0; j<unique_cols.size(); j++) {
                 if (unique_cols.at(j) == columns.at(i)) {
                     unique_vals.at(j) = values.at(i);
-                    std::cout << columns.at(i) <<std::endl;
                 }
             }
         }
@@ -112,7 +114,6 @@ int DatabaseClient::InsertValuesUnique(const std::string& table_name,
         for (int j=0; j<unique_cols.size(); j++) {
             if (unique_cols.at(j) == columns.at(last_col)) {
                 unique_vals.at(j) = values.at(last_col);
-                std::cout << columns.at(last_col) <<std::endl;
             }
         }
     }
@@ -136,7 +137,9 @@ int DatabaseClient::InsertValuesUnique(const std::string& table_name,
     query_stream << "LIMIT 1" << std::endl;
 
 
-    std::cout << query_stream.str() << std::endl;
+    //std::cout << query_stream.str() << std::endl;
+
+    std::lock_guard<std::mutex> conn_guard(conn_mutex_);
 
     try {
         pqxx::work transaction(connection_, "InsertValuesUniqueTransaction");
@@ -156,7 +159,7 @@ int DatabaseClient::InsertValuesUnique(const std::string& table_name,
             }
         }
     } catch (const std::exception& e)  {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "An exception occurred while inserting values uniquely: " << e.what() << std::endl;
         throw;
     }
     /*
@@ -179,40 +182,63 @@ int DatabaseClient::InsertValuesUnique(const std::string& table_name,
    return id_value;
 }
 
-const pqxx::result& DatabaseClient::GetValues(const std::string table_name,
+const pqxx::result DatabaseClient::GetValues(const std::string table_name,
                             const std::vector<std::string>& columns, const std::string& query) {
+    std::stringstream query_stream;
+
+    query_stream << "SELECT ";
+    if (columns.size() > 0) {
+        for (int i=0; i < columns.size()-1; i++) {
+            query_stream << /*connection_.quote(*/columns.at(i)/*)*/ << ", ";
+        }
+        query_stream << /*connection_.quote(*/columns.at(columns.size()-1)/*)*/;
+    }
+    query_stream << std::endl;
+    query_stream << " FROM " << table_name << std::endl;
+    if (query != "") {
+        query_stream << " WHERE (" << query << ")";
+    }
+    query_stream << ";" << std::endl;
+
+    std::lock_guard<std::mutex> conn_guard(conn_mutex_);
 
     try {
-        std::stringstream query_stream;
         pqxx::work transaction(connection_, "GetValuesTransaction");
-
-        query_stream << "SELECT ";
-        if (columns.size() > 0) {
-            for (int i=0; i < columns.size()-1; i++) {
-                query_stream << transaction.quote(columns.at(i)) << ", ";
-            }
-            query_stream << transaction.quote(columns.at(columns.size()));
-        }
-        query_stream << std::endl;
-        query_stream << " FROM " << table_name << std::endl;
-        if (query != "") {
-            query_stream << " WHERE " << query;
-        }
-        query_stream << ";" << std::endl;
-
         const auto& pg_result = transaction.exec(query_stream.str());
         transaction.commit();
-
-        std::vector<std::vector<std::string> > results;
-
-        /*for (const auto& row : pg_result) {
-            results.emplace_back(row);
-        }*/
 
         return pg_result;
     } catch (const std::exception& e)  {
         std::cerr << e.what() << std::endl;
+        throw;
     }
+}
+
+int DatabaseClient::GetID(const std::string& table_name, const std::string& query) {
+    std::string&& id_column_name = table_name+"ID";
+
+    const auto& results = GetValues(
+        table_name,
+        {id_column_name},
+        query
+    );
+
+    if (results.empty()) {
+        throw std::runtime_error("No matching ID found in table "+table_name+" for condition :\n"+query);
+    }
+
+    if (results.size() > 1) {
+        throw std::runtime_error("More than one "+id_column_name+" appears to satisfy the following condition:\n" + query + "\n" + std::to_string(results.size()));
+    }
+
+    int id_column_num = results.column_number(id_column_name);
+    for (const auto& row : results) {
+        return row.at(id_column_num).as<int>();
+    }
+}
+
+std::string DatabaseClient::EscapeString(const std::string& str) {
+    return connection_.quote(str);
 }
 
 const std::string DatabaseClient::BuildWhereClause(const std::vector<std::string>& cols, const std::vector<std::string>& vals) {

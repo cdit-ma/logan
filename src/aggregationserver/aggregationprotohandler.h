@@ -16,7 +16,6 @@ public:
     virtual void BindCallbacks(zmq::ProtoReceiver& ProtoReceiver) = 0;
 
 protected:
-    // Members
     std::shared_ptr<DatabaseClient> database_;
     std::shared_ptr<ExperimentTracker> experiment_tracker_;
 

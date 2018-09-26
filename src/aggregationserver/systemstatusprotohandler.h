@@ -14,8 +14,8 @@ public:
 
 private:
     // Hardware callbacks
-    void ProcessSystemStatus(const re_common::SystemStatus& status);
-    void ProcessSystemInfo(const re_common::SystemInfo& info);
+    void ProcessSystemStatus(const re_common::SystemStatus& status) {};
+    void ProcessSystemInfo(const re_common::SystemInfo& info) {};
 };
 
 
