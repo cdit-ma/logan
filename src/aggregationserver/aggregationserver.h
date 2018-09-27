@@ -21,14 +21,12 @@ namespace NodeManager {
     class Port;
 }
 
-class AggregationServer : public Execution {
+class AggregationServer {
 public:
 
     AggregationServer(const std::string& receiver_ip,
             const std::string& database_ip,
             const std::string& password);
-    
-    ~AggregationServer() {receiver.Terminate();};
 
     void LogComponentLifecycleEvent(const std::string& timeofday, const std::string& hostname, int id, int core_id, double core_utilisation);
     

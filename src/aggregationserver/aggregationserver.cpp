@@ -28,11 +28,10 @@
 #include "experimenttracker.h"
 
 
-//Execution execution;
-std::unique_ptr<AggregationServer> aggServer;
+Execution execution;
 
 void signal_handler (int signal_value){
-    aggServer->Interrupt();
+    execution.Interrupt();
 }
 
 
@@ -76,7 +75,10 @@ int main(int argc, char** argv) {
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
 
-    aggServer = std::unique_ptr<AggregationServer>(new AggregationServer(connect_address, database_ip, password));
+    
+    std::unique_ptr<AggregationServer> aggServer = std::unique_ptr<AggregationServer>(
+        new AggregationServer(connect_address, database_ip, password)
+    );
     
 
     
@@ -101,12 +103,9 @@ int main(int argc, char** argv) {
     std::cout << "stimulating" << std::endl;
     aggServer->StimulatePorts(lifecycleEvents, *writer);
     
-    aggServer->Start();
+    execution.Start();
 
-    //receiver->Terminate();
-    
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    //std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     std::cout << "Shutting down" << std::endl;
 
