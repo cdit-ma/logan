@@ -26,16 +26,15 @@
 #include <unordered_map>
 #include <set>
 #include <google/protobuf/message_lite.h>
+#include <memory>
 
-class Table;
+#include "../table.h"
 
 class SQLiteDatabase;
 namespace re_common{
-    class UserEvent;
     class LifecycleEvent;
     class WorkloadEvent;
-    class ComponentUtilizationEvent;
-    class MessageEvent;
+    class UtilizationEvent;
 }
 
 class ModelProtoHandler : public ProtoHandler{
@@ -47,21 +46,22 @@ class ModelProtoHandler : public ProtoHandler{
         
     private:
         //Table creation
-        void CreatePortEventTable();
-        void CreateComponentEventTable();
-        void CreateUserEventTable();
-        void CreateWorkloadEventTable();
-        void CreateComponentUtilizationTable();
+        void CreateLifecycleTable();
+        void CreateWorkloadTable();
+        void CreateUtilizationTable();
 
         //Callback functions
         void ProcessLifecycleEvent(const re_common::LifecycleEvent& message);
-        void ProcessUserEvent(const re_common::UserEvent& message);
         void ProcessWorkloadEvent(const re_common::WorkloadEvent& message);
-        void ProcessComponentUtilizationEvent(const re_common::ComponentUtilizationEvent& message);
+        void ProcessUtilizationEvent(const re_common::UtilizationEvent& message);
+
+        Table& GetTable(const std::string& table_name);
+        bool GotTable(const std::string& table_name);
 
         //Members
         SQLiteDatabase& database_;
-        std::unordered_map<std::string, Table*> table_map_;
+
+        std::unordered_map<std::string, std::unique_ptr<Table> > tables_;
         std::set<std::string> registered_nodes_;
 };
 

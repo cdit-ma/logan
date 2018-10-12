@@ -21,13 +21,17 @@
 #ifndef LOGAN_SERVER_HARDWAREPROTOHANDLER_H
 #define LOGAN_SERVER_HARDWAREPROTOHANDLER_H
 
+#ifdef _WIN32
+#define NOMINMAX 1
+#endif //_WIN32
+
 #include "../protohandler.h"
 
 #include <unordered_map>
 #include <set>
 #include <google/protobuf/message_lite.h>
 
-class Table;
+#include "../table.h"
 class SQLiteDatabase;
 namespace re_common{
     class SystemInfo;
