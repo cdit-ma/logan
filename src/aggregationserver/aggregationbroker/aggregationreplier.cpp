@@ -35,10 +35,6 @@ AggServer::AggregationReplier::ProcessPortLifecycleRequest(const AggServer::Port
             {"PortID", "Type", "to_char((sampletime::timestamp), 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS SampleTime"}
         );
 
-        for (unsigned int i=0; i < res.columns(); i++) {
-            std::cout << res.column_name(i) << std::endl;
-        }
-
         for (const auto& row : res) {
             auto event = response->add_events();
 
