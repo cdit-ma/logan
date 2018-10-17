@@ -12,14 +12,14 @@
 
 
 void ModelEventProtoHandler::BindCallbacks(zmq::ProtoReceiver& receiver) {
-    receiver.RegisterProtoCallback<re_common::UserEvent>(std::bind(&ModelEventProtoHandler::ProcessUserEvent, this, std::placeholders::_1));
+    //receiver.RegisterProtoCallback<re_common::UserEvent>(std::bind(&ModelEventProtoHandler::ProcessUserEvent, this, std::placeholders::_1));
     receiver.RegisterProtoCallback<re_common::LifecycleEvent>(std::bind(&ModelEventProtoHandler::ProcessLifecycleEvent, this, std::placeholders::_1));
     receiver.RegisterProtoCallback<re_common::WorkloadEvent>(std::bind(&ModelEventProtoHandler::ProcessWorkloadEvent, this, std::placeholders::_1));
-    receiver.RegisterProtoCallback<re_common::ComponentUtilizationEvent>(std::bind(&ModelEventProtoHandler::ProcessComponentUtilizationEvent, this, std::placeholders::_1));
+    receiver.RegisterProtoCallback<re_common::UtilizationEvent>(std::bind(&ModelEventProtoHandler::ProcessUtilizationEvent, this, std::placeholders::_1));
 }
 
 
-void ModelEventProtoHandler::ProcessUserEvent(const re_common::UserEvent& message){
+/*void ModelEventProtoHandler::ProcessUserEvent(const re_common::UserEvent& message){
 
     int component_instance_id = GetComponentInstanceID(message.component(), message.info().experiment_name());
 
@@ -31,7 +31,7 @@ void ModelEventProtoHandler::ProcessUserEvent(const re_common::UserEvent& messag
         {"ComponentInstanceID", "Message", "Type", "SampleTime"},
         {std::to_string(component_instance_id), message.message(), type, sample_time}
     );
-}
+}*/
 
 void ModelEventProtoHandler::ProcessLifecycleEvent(const re_common::LifecycleEvent& message){
     if (message.has_component()) {
@@ -49,8 +49,8 @@ void ModelEventProtoHandler::ProcessLifecycleEvent(const re_common::LifecycleEve
 
 
 void ModelEventProtoHandler::ProcessWorkloadEvent(const re_common::WorkloadEvent& message) {
-    std::string worker_instance_id = std::to_string(GetWorkerInstanceID(message.component(), message.name(), message.info().experiment_name()));
-    std::string function = message.function();
+    std::string worker_instance_id = std::to_string(GetWorkerInstanceID(message.component(), message.worker().name(), message.info().experiment_name()));
+    std::string function = message.function_name();
     std::string type = re_common::WorkloadEvent::Type_Name(message.event_type());
     std::string args = message.args();
     std::string sample_time = AggServer::FormatTimestamp(message.info().timestamp());
@@ -62,10 +62,10 @@ void ModelEventProtoHandler::ProcessWorkloadEvent(const re_common::WorkloadEvent
     );
 }
 
-void ModelEventProtoHandler::ProcessComponentUtilizationEvent(const re_common::ComponentUtilizationEvent& message) {
+void ModelEventProtoHandler::ProcessUtilizationEvent(const re_common::UtilizationEvent& message) {
     std::string port_id = std::to_string(GetPortID(message.port(), message.component(), message.info().experiment_name()));
     std::string seq_num = std::to_string(message.port_event_id());
-    std::string type = re_common::ComponentUtilizationEvent::Type_Name(message.type());
+    std::string type = re_common::UtilizationEvent::Type_Name(message.type());
     std::string sample_time = AggServer::FormatTimestamp(message.info().timestamp());
 
     database_->InsertValues(

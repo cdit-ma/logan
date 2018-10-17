@@ -233,10 +233,10 @@ void AggregationServer::StimulatePorts(const std::vector<re_common::LifecycleEve
 
         // For each port in our database we're going to generate a configured lifecycle event
         for (const auto& port_id_row : port_id_results) {
-            int port_id;
+            //int port_id;
             std::string port_name;
             try {
-                port_id = port_id_row["PortID"].as<int>();
+                //port_id = port_id_row["PortID"].as<int>();
                 port_name = port_id_row["Name"].as<std::string>();
             } catch (const std::exception& e) {
                 std::cerr << e.what() << std::endl;

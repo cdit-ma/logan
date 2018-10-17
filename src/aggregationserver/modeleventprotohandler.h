@@ -14,10 +14,10 @@ public:
 
 private:
     // Model callbacks
-    void ProcessUserEvent(const re_common::UserEvent& message);
+    //void ProcessUserEvent(const re_common::UserEvent& message);
     void ProcessLifecycleEvent(const re_common::LifecycleEvent& message);
     void ProcessWorkloadEvent(const re_common::WorkloadEvent& message);
-    void ProcessComponentUtilizationEvent(const re_common::ComponentUtilizationEvent& message);
+    void ProcessUtilizationEvent(const re_common::UtilizationEvent& message);
 
     // Insertion helpers
     void InsertComponentLifecycleEvent(const re_common::Info& info,
