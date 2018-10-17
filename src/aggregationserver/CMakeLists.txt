@@ -9,6 +9,8 @@ find_package(ZMQ REQUIRED)
 find_package(Boost 1.30.0 COMPONENTS program_options REQUIRED)
 #find_package(pqxx REQUIRED)
 
+add_subdirectory("aggregationbroker")
+
 #Pass Version info into cmakevars.h
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../cmakevars.h.in ${CMAKE_CURRENT_BINARY_DIR}/cmakevars.h)
 
