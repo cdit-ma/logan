@@ -13,6 +13,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../../cmakevars.h.in ${CMAKE_CURRENT_
 
 set(SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/../databaseclient.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/../utils.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/aggregationbroker.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/aggregationreplier.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
@@ -20,6 +21,7 @@ set(SOURCES
 
 set(HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/../databaseclient.h
+	${CMAKE_CURRENT_SOURCE_DIR}/../utils.h
 	${CMAKE_CURRENT_SOURCE_DIR}/aggregationbroker.h
 	${CMAKE_CURRENT_SOURCE_DIR}/aggregationreplier.h
 )

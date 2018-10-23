@@ -257,7 +257,7 @@ void AggregationServer::StimulatePorts(const std::vector<re_common::LifecycleEve
                 if (event.port().name() == port_name) {
                     auto configured_event = std::unique_ptr<re_common::LifecycleEvent>(new re_common::LifecycleEvent(event));
                     configured_event->set_type(re_common::LifecycleEvent::CONFIGURED);
-                    configured_event->mutable_info()->set_timestamp(2.0);
+                    configured_event->mutable_info()->set_timestamp(3.141591231231241234);
                     bool success = writer.PushMessage(std::move(configured_event));
                     if (!success) {
                         std::cout << "Something went wrong pushing message" << std::endl;

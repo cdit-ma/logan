@@ -34,6 +34,8 @@ public:
 
     std::string EscapeString(const std::string& str);
 
+    const pqxx::result GetPortLifecycleEventInfo(std::string start_time, std::string end_time);
+
 private:
     const std::string BuildWhereClause(const std::vector<std::string>& cols, const std::vector<std::string>& vals);
     const std::string BuildColTuple(const std::vector<std::string>& cols);

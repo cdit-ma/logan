@@ -5,6 +5,8 @@
 
 #include <algorithm>
 
+#include "utils.h"
+
 DatabaseClient::DatabaseClient(const std::string& connection_details) : 
     connection_(connection_details)
 {
@@ -50,14 +52,14 @@ int DatabaseClient::InsertValues(const std::string& table_name,
     query_stream << "INSERT INTO " << table_name;
     if (columns.size() > 0) {
         query_stream << " (";
-        for (int i=0; i < columns.size()-1; i++) {
+        for (unsigned int i=0; i < columns.size()-1; i++) {
             query_stream << columns.at(i) << ',';
         }
         query_stream << columns.at(columns.size()-1) << ')';
     }
 
     query_stream << std::endl << " VALUES (";
-    for (int i=0; i<values.size()-1; i++) {
+    for (unsigned int i=0; i<values.size()-1; i++) {
         query_stream << values.at(i) << ',';
     }
     query_stream << values.at(values.size()-1) << ")" << std::endl;
@@ -72,16 +74,17 @@ int DatabaseClient::InsertValues(const std::string& table_name,
 
         std::string lower_id_column(id_column);
         std::transform(lower_id_column.begin(), lower_id_column.end(), lower_id_column.begin(), ::tolower);
-        int id_colnum = result.column_number(lower_id_column);
+        unsigned int id_colnum = result.column_number(lower_id_column);
 
         for (const auto& row : result) {
-            for (int colnum=0; colnum < row.size(); colnum++) {
+            for (unsigned int colnum=0; colnum < row.size(); colnum++) {
                 if (colnum == id_colnum) {
                     id_value = row[colnum].as<int>();
                     return id_value;
                 }
             }
         }
+        throw std::runtime_error("ID associated with values not found in database query result");
     } catch (const std::exception& e)  {
         std::cerr << e.what() << std::endl;
         throw;
@@ -101,9 +104,9 @@ int DatabaseClient::InsertValuesUnique(const std::string& table_name,
     query_stream << "INSERT INTO " << table_name;
     if (columns.size() > 0) {
         query_stream << " (";
-        for (int i=0; i < columns.size()-1; i++) {
+        for (unsigned int i=0; i < columns.size()-1; i++) {
             query_stream << columns.at(i) << ',';
-            for (int j=0; j<unique_cols.size(); j++) {
+            for (unsigned int j=0; j<unique_cols.size(); j++) {
                 if (unique_cols.at(j) == columns.at(i)) {
                     unique_vals.at(j) = values.at(i);
                 }
@@ -111,7 +114,7 @@ int DatabaseClient::InsertValuesUnique(const std::string& table_name,
         }
         int last_col = columns.size()-1;
         query_stream << columns.at(last_col) << ')';
-        for (int j=0; j<unique_cols.size(); j++) {
+        for (unsigned int j=0; j<unique_cols.size(); j++) {
             if (unique_cols.at(j) == columns.at(last_col)) {
                 unique_vals.at(j) = values.at(last_col);
             }
@@ -119,7 +122,7 @@ int DatabaseClient::InsertValuesUnique(const std::string& table_name,
     }
 
     query_stream << std::endl << " VALUES (";
-    for (int i=0; i<values.size()-1; i++) {
+    for (unsigned int i=0; i<values.size()-1; i++) {
         query_stream << connection_.quote(values.at(i)) << ",";
     }
     query_stream << connection_.quote(values.at(values.size()-1)) << ")" << std::endl;
@@ -148,10 +151,10 @@ int DatabaseClient::InsertValuesUnique(const std::string& table_name,
         
         std::string lower_id_column(id_column);
         std::transform(lower_id_column.begin(), lower_id_column.end(), lower_id_column.begin(), ::tolower);
-        int id_colnum = result.column_number(lower_id_column);
+        unsigned int id_colnum = result.column_number(lower_id_column);
 
         for (const auto& row : result) {
-            for (int colnum=0; colnum < row.size(); colnum++) {
+            for (unsigned int colnum=0; colnum < row.size(); colnum++) {
                 if (colnum == id_colnum) {
                     id_value = row.at(colnum).as<int>();
                     return id_value;
@@ -188,7 +191,7 @@ const pqxx::result DatabaseClient::GetValues(const std::string table_name,
 
     query_stream << "SELECT ";
     if (columns.size() > 0) {
-        for (int i=0; i < columns.size()-1; i++) {
+        for (unsigned int i=0; i < columns.size()-1; i++) {
             query_stream << /*connection_.quote(*/columns.at(i)/*)*/ << ", ";
         }
         query_stream << /*connection_.quote(*/columns.at(columns.size()-1)/*)*/;
@@ -234,6 +237,42 @@ int DatabaseClient::GetID(const std::string& table_name, const std::string& quer
     int id_column_num = results.column_number(id_column_name);
     for (const auto& row : results) {
         return row.at(id_column_num).as<int>();
+    }
+
+    throw std::runtime_error("Did not find ID amongst returned database columns when calling GetID on "+table_name);
+}
+
+const pqxx::result DatabaseClient::GetPortLifecycleEventInfo(std::string start_time, std::string end_time) {
+    std::stringstream query_stream;
+
+    query_stream << "SELECT PortLifecycleEvent.Type, to_char((sampletime::timestamp), 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS SampleTime,\n";
+    query_stream << "   Port.Name AS PortName, Port.Type AS PortType, Port.Kind AS PortKind, Port.Path AS PortPath, Port.Middleware, \n";
+    query_stream << "   ComponentInstance.Name AS ComponentInstanceName, ComponentInstance.Path AS ComponentInstancePath,\n";
+    query_stream << "   Component.Name AS ComponentName,\n";
+    query_stream << "   Node.Hostname AS NodeHostname, Node.IP AS NodeIP\n";
+    query_stream << "FROM PortLifecycleEvent, Port, ComponentInstance, Component, Node \n";
+    query_stream << "WHERE PortLifecycleEvent.PortID = Port.PortID\n";
+    query_stream << "   AND Port.ComponentInstanceID = ComponentInstance.ComponentInstanceID\n";
+    query_stream << "   AND ComponentInstance.ComponentID = Component.ComponentID\n";
+    query_stream << "   AND ComponentInstance.NodeID = Node.NodeID\n";
+    query_stream << "AND PortLifecycleEvent.SampleTime >= '" << /*connection_.quote(*/start_time/*)*/ << "'";
+
+    if (end_time != AggServer::FormatTimestamp(0.0)) {
+        query_stream << "AND PortLifecycleEvent.SampleTime <= '" << /*connection_.quote(*/end_time/*)*/ << "'";
+    }
+    query_stream << std::endl;
+
+    std::lock_guard<std::mutex> conn_guard(conn_mutex_);
+
+    try {
+        pqxx::work transaction(connection_, "GetValuesTransaction");
+        const auto& pg_result = transaction.exec(query_stream.str());
+        transaction.commit();
+
+        return pg_result;
+    } catch (const std::exception& e)  {
+        std::cerr << e.what() << std::endl;
+        throw;
     }
 }
 
