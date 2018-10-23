@@ -13,6 +13,7 @@
 #include <boost/program_options.hpp>
 
 #include <google/protobuf/util/json_util.h>
+#include <random>
 
 #include <zmq/protowriter/protowriter.h>
 #include <zmq/protoreceiver/protoreceiver.h>
@@ -231,6 +232,9 @@ void AggregationServer::StimulatePorts(const std::vector<re_common::LifecycleEve
             {"PortID", "Name", "Path"}
         );
 
+        
+	    srand(13520);
+
         // For each port in our database we're going to generate a configured lifecycle event
         for (const auto& port_id_row : port_id_results) {
             //int port_id;
@@ -257,7 +261,7 @@ void AggregationServer::StimulatePorts(const std::vector<re_common::LifecycleEve
                 if (event.port().name() == port_name) {
                     auto configured_event = std::unique_ptr<re_common::LifecycleEvent>(new re_common::LifecycleEvent(event));
                     configured_event->set_type(re_common::LifecycleEvent::CONFIGURED);
-                    configured_event->mutable_info()->set_timestamp(3.141591231231241234);
+                    configured_event->mutable_info()->set_timestamp((rand()%1000000000)/1000000.0);
                     bool success = writer.PushMessage(std::move(configured_event));
                     if (!success) {
                         std::cout << "Something went wrong pushing message" << std::endl;
