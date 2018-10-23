@@ -33,7 +33,7 @@ AggServer::AggregationReplier::ProcessPortLifecycleRequest(const AggServer::Port
     } else {
         end = TimeUtil::ToString(TimeUtil::SecondsToTimestamp(0));
     }
-    
+
     std::cout << "Getting PortLifecycleEvents between " << start << " and " << end << std::endl;
 
     try {
@@ -54,7 +54,7 @@ AggServer::AggregationReplier::ProcessPortLifecycleRequest(const AggServer::Port
             // Build Port
             auto port = event->mutable_port();
             port->set_name(row["PortName"].as<std::string>());
-            port->set_name(row["PortPath"].as<std::string>());
+            port->set_path(row["PortPath"].as<std::string>());
             Port::Kind kind;
             bool did_parse_lifecycle = AggServer::Port::Kind_Parse(row["PortKind"].as<std::string>(), &kind);
             port->set_kind(kind);
