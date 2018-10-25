@@ -268,8 +268,16 @@ void AggregationServer::StimulatePorts(const std::vector<re_common::LifecycleEve
                     }
                 }
             }
-           
         }
+
+        for (unsigned int i=0; i<1000; i++) {
+            database_client->TestInsertUnprepared({"1", "'CONFIGURE'", "'1970-01-01 00:00:09.837039'"});
+        }
+        for (unsigned int i=0; i<1000; i++) {
+            database_client->TestInsertPrepared({"1", "'CONFIGURE'", "'1970-01-01 00:00:09.837039'"});
+        }
+        std::cout << "Average prepared: " << database_client->total_prepared_us/1000.0 << std::endl;
+        std::cout << "Average unprepared: " << database_client->total_unprepared_us/1000.0 << std::endl;
     } catch (const std::exception& e) {
         std::cerr << "Caught an exception retrieving ports: " << e.what() << std::endl;
         throw;

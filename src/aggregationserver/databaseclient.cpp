@@ -3,6 +3,8 @@
 #include <sstream>
 #include <iostream>
 
+#include <chrono>
+
 #include <algorithm>
 
 #include "utils.h"
@@ -245,6 +247,18 @@ int DatabaseClient::GetID(const std::string& table_name, const std::string& quer
 const pqxx::result DatabaseClient::GetPortLifecycleEventInfo(std::string start_time, std::string end_time) {
     std::stringstream query_stream;
 
+    // query_stream << "SELECT PortLifecycleEvent.Type, to_char((sampletime::timestamp), 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS SampleTime,\n";
+    // query_stream << "   Port.Name AS PortName, Port.Type AS PortType, Port.Kind AS PortKind, Port.Path AS PortPath, Port.Middleware, \n";
+    // query_stream << "   ComponentInstance.Name AS ComponentInstanceName, ComponentInstance.Path AS ComponentInstancePath,\n";
+    // query_stream << "   Component.Name AS ComponentName,\n";
+    // query_stream << "   Node.Hostname AS NodeHostname, Node.IP AS NodeIP\n";
+    // query_stream << "FROM PortLifecycleEvent, Port, ComponentInstance, Component, Node \n";
+    // query_stream << "WHERE PortLifecycleEvent.PortID = Port.PortID\n";
+    // query_stream << "   AND Port.ComponentInstanceID = ComponentInstance.ComponentInstanceID\n";
+    // query_stream << "   AND ComponentInstance.ComponentID = Component.ComponentID\n";
+    // query_stream << "   AND ComponentInstance.NodeID = Node.NodeID\n";
+    // query_stream << "AND PortLifecycleEvent.SampleTime >= '" << /*connection_.quote(*/start_time/*)*/ << "'";
+
     query_stream << "SELECT PortLifecycleEvent.Type, to_char((sampletime::timestamp), 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS SampleTime,\n";
     query_stream << "   Port.Name AS PortName, Port.Type AS PortType, Port.Kind AS PortKind, Port.Path AS PortPath, Port.Middleware, \n";
     query_stream << "   ComponentInstance.Name AS ComponentInstanceName, ComponentInstance.Path AS ComponentInstancePath,\n";
@@ -255,7 +269,8 @@ const pqxx::result DatabaseClient::GetPortLifecycleEventInfo(std::string start_t
     query_stream << "   AND Port.ComponentInstanceID = ComponentInstance.ComponentInstanceID\n";
     query_stream << "   AND ComponentInstance.ComponentID = Component.ComponentID\n";
     query_stream << "   AND ComponentInstance.NodeID = Node.NodeID\n";
-    query_stream << "AND PortLifecycleEvent.SampleTime >= '" << /*connection_.quote(*/start_time/*)*/ << "'";
+    query_stream << "AND PortLifecycleEvent.SampleTime >= $1";
+    //query_stream << "AND PortLifecycleEvent.SampleTime >= '" << /*connection_.quote(*/start_time/*)*/ << "'\n";
 
     if (end_time != AggServer::FormatTimestamp(0.0)) {
         query_stream << "AND PortLifecycleEvent.SampleTime <= '" << /*connection_.quote(*/end_time/*)*/ << "'";
@@ -264,10 +279,34 @@ const pqxx::result DatabaseClient::GetPortLifecycleEventInfo(std::string start_t
 
     std::lock_guard<std::mutex> conn_guard(conn_mutex_);
 
+    std::cout << query_stream.str() << std::endl;
+
     try {
-        pqxx::work transaction(connection_, "GetValuesTransaction");
-        const auto& pg_result = transaction.exec(query_stream.str());
+        //clock_t benchmark_start = clock();
+        auto start = std::chrono::steady_clock::now();
+
+        pqxx::work transaction(connection_, "GetPortLifecycleEvents");
+
+        if (!transaction.prepared("GetPortLifecycleEvents").exists()) {
+            std::cout << "Preparing new transaction for the first time" << std::endl;
+            connection_.prepare("GetPortLifecycleEvents", query_stream.str());
+        } else {
+            std::cout << "Using a PRE-PREPARED TRANSACTION FOR THIS STUFFFFF" << std::endl;
+        }
+
+        //const auto& pg_result = transaction.exec(query_stream.str());
+        //const auto& pg_result = transaction.exec("SELECT NULL;");
+        const auto& pg_result = transaction.prepared("GetPortLifecycleEvents")(start_time).exec();
         transaction.commit();
+        /*for (unsigned int i=0; i<10000000; i++) {
+
+            query_stream << "slow down loop " << std::endl;
+        }*/
+        //clock_t benchmark_end = clock();
+        auto us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start);
+
+        //std::cout << "Time to get events: " << double(benchmark_end-benchmark_start)/CLOCKS_PER_SEC << std::endl;
+        std::cout << "Time to get events: " << us.count() << std::endl;
 
         return pg_result;
     } catch (const std::exception& e)  {
