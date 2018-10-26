@@ -262,7 +262,23 @@ void AggregationServer::StimulatePorts(const std::vector<re_common::LifecycleEve
                     auto configured_event = std::unique_ptr<re_common::LifecycleEvent>(new re_common::LifecycleEvent(event));
                     configured_event->set_type(re_common::LifecycleEvent::CONFIGURED);
                     configured_event->mutable_info()->set_timestamp((rand()%1000000000)/1000000.0);
+                    
+                    auto activated_event = std::unique_ptr<re_common::LifecycleEvent>(new re_common::LifecycleEvent(*configured_event));
+                    activated_event->set_type(re_common::LifecycleEvent::ACTIVATED);
+                    activated_event->mutable_info()->set_timestamp(activated_event->mutable_info()->timestamp()+5.0);
+
+                    auto passivated_event = std::unique_ptr<re_common::LifecycleEvent>(new re_common::LifecycleEvent(*configured_event));
+                    passivated_event->set_type(re_common::LifecycleEvent::PASSIVATED);
+                    passivated_event->mutable_info()->set_timestamp(passivated_event->mutable_info()->timestamp()+33.5);
+
+                    auto terminated_event = std::unique_ptr<re_common::LifecycleEvent>(new re_common::LifecycleEvent(*configured_event));
+                    terminated_event->set_type(re_common::LifecycleEvent::TERMINATED);
+                    terminated_event->mutable_info()->set_timestamp(terminated_event->mutable_info()->timestamp()+42.5);
+
                     bool success = writer.PushMessage(std::move(configured_event));
+                    success = writer.PushMessage(std::move(activated_event));
+                    success = writer.PushMessage(std::move(passivated_event));
+                    success = writer.PushMessage(std::move(terminated_event));
                     if (!success) {
                         std::cout << "Something went wrong pushing message" << std::endl;
                     }
