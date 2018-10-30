@@ -11,5 +11,6 @@
 
 
 void SystemStatusProtoHandler::BindCallbacks(zmq::ProtoReceiver& receiver) {
-    receiver.RegisterProtoCallback<re_common::SystemStatus>(std::bind(&SystemStatusProtoHandler::ProcessSystemStatus, this, std::placeholders::_1));
+    receiver.RegisterProtoCallback<SystemEvent::StatusEvent>(std::bind(&SystemStatusProtoHandler::ProcessStatusEvent, this, std::placeholders::_1));
+    receiver.RegisterProtoCallback<SystemEvent::InfoEvent>(std::bind(&SystemStatusProtoHandler::ProcessInfoEvent, this, std::placeholders::_1));
 }

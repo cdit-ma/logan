@@ -19,16 +19,25 @@
  */
 
 #include "systeminfo.h"
-#include <proto/systemstatus/systemstatus.pb.h>
+#include <proto/systemevent/systemevent.pb.h>
+#include <google/protobuf/util/time_util.h>
 
 
-double SystemInfo::convert_timestamp(const std::chrono::milliseconds& timestamp){
-    return timestamp.count() / 1000.0;
+
+std::unique_ptr<google::protobuf::Timestamp> convert_timestamp(const std::chrono::milliseconds& timestamp){
+    using namespace google::protobuf;
+    return std::unique_ptr<Timestamp>(new Timestamp(util::TimeUtil::MillisecondsToTimestamp(timestamp.count())));
+}
+
+std::unique_ptr<google::protobuf::Duration> convert_duration(const std::chrono::milliseconds& duration){
+    using namespace google::protobuf;
+    return std::unique_ptr<Duration>(new Duration(util::TimeUtil::MillisecondsToDuration(duration.count())));
 }
 
 //Refresh
-re_common::SystemStatus* SystemInfo::GetSystemStatus(const int listener_id){
+std::unique_ptr<SystemEvent::StatusEvent> SystemInfo::GetSystemStatus(const int listener_id){
     std::lock_guard<std::mutex> lock(mutex_);
+    
 
     const auto& current_data_time = get_update_timestamp();
     std::chrono::milliseconds last_update_sent(0);
@@ -42,11 +51,10 @@ re_common::SystemStatus* SystemInfo::GetSystemStatus(const int listener_id){
         return nullptr;
     }
     
-    
-    auto system_status = new re_common::SystemStatus();
+    auto system_status = std::unique_ptr<SystemEvent::StatusEvent>(new SystemEvent::StatusEvent);
     
     system_status->set_hostname(get_hostname());
-    system_status->set_timestamp(convert_timestamp(current_data_time));
+    system_status->set_allocated_timestamp(convert_timestamp(current_data_time).release());
     
 
     if(!listener_message_count_.count(listener_id)){
@@ -72,8 +80,9 @@ re_common::SystemStatus* SystemInfo::GetSystemStatus(const int listener_id){
         if(update_pid){
             auto process_status = system_status->add_processes();
             process_status->set_pid(pid);
+            
             process_status->set_name(get_process_name(pid));
-            process_status->set_state((re_common::ProcessStatus::State)get_process_state(pid));
+            process_status->set_state((SystemEvent::ProcessStatus::State)get_process_state(pid));
 
             //Only send the one time info if we haven't seen this message
             bool send_process_info = !(pid_lookups_.count(listener_id) && pid_lookups_.at(listener_id).count(pid));
@@ -81,19 +90,22 @@ re_common::SystemStatus* SystemInfo::GetSystemStatus(const int listener_id){
             if(send_process_info){
                 auto process_info = system_status->add_process_info();
                 process_info->set_pid(pid);
-                process_info->set_name(get_process_name(pid));
+                process_info->set_cwd(get_process_cwd(pid));
+                process_info->set_name(get_process_full_name(pid));
                 process_info->set_args(get_process_arguments(pid));
-                process_info->set_start_time(get_monitored_process_start_time(pid));
+                process_info->set_allocated_start_time(convert_timestamp(get_monitored_process_start_time(pid)).release());
             }
 
             //Set the status info
             process_status->set_cpu_core_id(get_monitored_process_cpu(pid));
             process_status->set_cpu_utilization(get_monitored_process_cpu_utilization(pid));
+            process_status->set_phys_mem_used_kb(get_monitored_process_phys_mem_used_kB(pid));
             process_status->set_phys_mem_utilization(get_monitored_process_phys_mem_utilization(pid));
             process_status->set_thread_count(get_monitored_process_thread_count(pid));
-            process_status->set_disk_read(get_monitored_process_disk_read(pid));
-            process_status->set_disk_written(get_monitored_process_disk_written(pid));
-            process_status->set_disk_total(get_monitored_process_disk_total(pid));
+            process_status->set_allocated_cpu_time(convert_duration(get_monitored_process_cpu_time(pid)).release());
+            process_status->set_disk_read_kilobytes(get_monitored_process_disk_read_kB(pid));
+            process_status->set_disk_written_kilobytes(get_monitored_process_disk_written_kB(pid));
+            process_status->set_disk_total_kilobytes(get_monitored_process_disk_total_kB(pid));
         }
     }
 
@@ -123,13 +135,14 @@ re_common::SystemStatus* SystemInfo::GetSystemStatus(const int listener_id){
     return system_status;
 }
 
-re_common::SystemInfo* SystemInfo::GetSystemInfo(const int listener_id){
+std::unique_ptr<SystemEvent::InfoEvent> SystemInfo::GetSystemInfo(const int listener_id){
     std::lock_guard<std::mutex> lock(mutex_);
 
-    auto system_info = new re_common::SystemInfo();
+    auto system_info = std::unique_ptr<SystemEvent::InfoEvent>(new SystemEvent::InfoEvent);
     
     system_info->set_hostname(get_hostname());
-    system_info->set_timestamp(convert_timestamp(get_update_timestamp()));
+    system_info->set_allocated_timestamp(convert_timestamp(get_update_timestamp()).release());
+
 
     //OS info
     system_info->set_os_name(get_os_name());
@@ -142,8 +155,8 @@ re_common::SystemInfo* SystemInfo::GetSystemInfo(const int listener_id){
     //Hardware info
     system_info->set_cpu_model(get_cpu_model());
     system_info->set_cpu_vendor(get_cpu_vendor());
-    system_info->set_cpu_frequency(get_cpu_frequency());
-    system_info->set_physical_memory(get_phys_mem());
+    system_info->set_cpu_frequency_hz(get_cpu_frequency());
+    system_info->set_physical_memory_kilobytes(get_phys_mem_kB());
 
     //File systems info
     const auto fs_count = get_fs_count();
@@ -151,8 +164,8 @@ re_common::SystemInfo* SystemInfo::GetSystemInfo(const int listener_id){
         auto file_system_info = system_info->add_file_system_info();    
         //send onetime info
         file_system_info->set_name(get_fs_name(i));
-        file_system_info->set_type((re_common::FileSystemInfo::Type)get_fs_type(i));
-        file_system_info->set_size(get_fs_size(i));
+        file_system_info->set_type((SystemEvent::FileSystemInfo::Type)get_fs_type(i));
+        file_system_info->set_size_kilobytes(get_fs_size_kB(i));
     }
 
     //Network interface info

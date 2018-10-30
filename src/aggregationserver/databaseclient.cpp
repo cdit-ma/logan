@@ -242,7 +242,12 @@ int DatabaseClient::GetID(const std::string& table_name, const std::string& quer
     throw std::runtime_error("Did not find ID amongst returned database columns when calling GetID on "+table_name);
 }
 
-const pqxx::result DatabaseClient::GetPortLifecycleEventInfo(std::string start_time, std::string end_time) {
+const pqxx::result DatabaseClient::GetPortLifecycleEventInfo(
+        std::string start_time,
+        std::string end_time,
+        const std::vector<std::string>& condition_columns,
+        const std::vector<std::string>& condition_values
+) {
     std::stringstream query_stream;
 
     query_stream << "SELECT PortLifecycleEvent.Type, to_char((sampletime::timestamp), 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS SampleTime,\n";
@@ -250,16 +255,21 @@ const pqxx::result DatabaseClient::GetPortLifecycleEventInfo(std::string start_t
     query_stream << "   ComponentInstance.Name AS ComponentInstanceName, ComponentInstance.Path AS ComponentInstancePath,\n";
     query_stream << "   Component.Name AS ComponentName,\n";
     query_stream << "   Node.Hostname AS NodeHostname, Node.IP AS NodeIP\n";
-    query_stream << "FROM PortLifecycleEvent, Port, ComponentInstance, Component, Node \n";
-    query_stream << "WHERE PortLifecycleEvent.PortID = Port.PortID\n";
-    query_stream << "   AND Port.ComponentInstanceID = ComponentInstance.ComponentInstanceID\n";
-    query_stream << "   AND ComponentInstance.ComponentID = Component.ComponentID\n";
-    query_stream << "   AND ComponentInstance.NodeID = Node.NodeID\n";
-    query_stream << "AND PortLifecycleEvent.SampleTime >= '" << /*connection_.quote(*/start_time/*)*/ << "'";
+    query_stream << "FROM PortLifecycleEvent INNER JOIN Port ON PortLifecycleEvent.PortID = Port.PortID\n";
+    query_stream << "   INNER JOIN ComponentInstance ON Port.ComponentInstanceID = ComponentInstance.ComponentInstanceID\n";
+    query_stream << "   INNER JOIN Component ON ComponentInstance.ComponentID = Component.ComponentID\n";
+    query_stream << "   INNER JOIN Node ON ComponentInstance.NodeID = Node.NodeID\n";
+    if (condition_columns.size() != 0) {
+        query_stream << BuildWhereClause(condition_columns, condition_values) << " AND ";
+    } else {
+        query_stream << "WHERE ";
+    }
+    query_stream << "PortLifecycleEvent.SampleTime >= '" << /*connection_.quote(*/start_time/*)*/ << "'";
 
     if (end_time != AggServer::FormatTimestamp(0.0)) {
         query_stream << "AND PortLifecycleEvent.SampleTime <= '" << /*connection_.quote(*/end_time/*)*/ << "'";
     }
+    //query_stream << " ORDER BY PortLifecycleEvent.SampleTime";
     query_stream << std::endl;
 
     std::lock_guard<std::mutex> conn_guard(conn_mutex_);

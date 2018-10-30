@@ -7,11 +7,17 @@ using google::protobuf::util::TimeUtil;
 AggServer::AggregationReplier::AggregationReplier(std::shared_ptr<DatabaseClient> database) :
     database_(database)
 {
+    const auto&& res = database_->GetPortLifecycleEventInfo(
+        "1970-01-01T00:00:00.000000Z",
+        "1970-01-01T9:10:23.924073Z",
+        {"Port.Path"},
+        {"top_level_assembly.1/tx_assembly.1//tx_port"}
+    );
+    std::cout << "num affected rows" << res.size() << std::endl;
 }
 
 std::unique_ptr<AggServer::PortLifecycleResponse>
 AggServer::AggregationReplier::ProcessPortLifecycleRequest(const AggServer::PortLifecycleRequest& message) {
-    std::cerr << "Received PortLifecycleEventRequest" << std::endl;
 
     std::unique_ptr<AggServer::PortLifecycleResponse> response = std::unique_ptr<AggServer::PortLifecycleResponse>(
         new AggServer::PortLifecycleResponse()
@@ -34,10 +40,24 @@ AggServer::AggregationReplier::ProcessPortLifecycleRequest(const AggServer::Port
         end = TimeUtil::ToString(TimeUtil::SecondsToTimestamp(0));
     }
 
-    std::cout << "Getting PortLifecycleEvents between " << start << " and " << end << std::endl;
+    // Get filter conditions
+    std::vector<std::string> condition_cols;
+    std::vector<std::string> condition_vals;
+    for(const auto& port_path : message.port_paths()) {
+        condition_cols.emplace_back("Port.Path");
+        condition_vals.emplace_back(port_path);
+    }
+    for(const auto& component_inst_path : message.component_instance_paths()) {
+        condition_cols.emplace_back("ComponentInstance.Path");
+        condition_vals.emplace_back(component_inst_path);
+    }
+    for(const auto& component_name : message.component_names()) {
+        condition_cols.emplace_back("Component.Name");
+        condition_vals.emplace_back(component_name);
+    }
 
     try {
-        const pqxx::result res = database_->GetPortLifecycleEventInfo(start, end);
+        const pqxx::result res = database_->GetPortLifecycleEventInfo(start, end, condition_cols, condition_vals);
 
         for (const auto& row : res) {
             auto event = response->add_events();

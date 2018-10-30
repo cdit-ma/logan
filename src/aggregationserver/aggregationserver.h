@@ -9,7 +9,7 @@ class DatabaseClient;
 
 class AggregationProtoHandler;
 
-namespace re_common {
+namespace ModelEvent {
     class LifecycleEvent;
     class Component;
     class Port;
@@ -30,21 +30,21 @@ public:
 
     void LogComponentLifecycleEvent(const std::string& timeofday, const std::string& hostname, int id, int core_id, double core_utilisation);
     
-    void StimulatePorts(const std::vector<re_common::LifecycleEvent>& events, zmq::ProtoWriter& writer);
+    void StimulatePorts(const std::vector<ModelEvent::LifecycleEvent>& events, zmq::ProtoWriter& writer);
 
-    std::vector<re_common::LifecycleEvent> GenerateLifecyclesFromControlMessage(const NodeManager::ControlMessage& message);
-    void AddLifecycleEventsFromNode(std::vector<re_common::LifecycleEvent>& events,
+    std::vector<ModelEvent::LifecycleEvent> GenerateLifecyclesFromControlMessage(const NodeManager::ControlMessage& message);
+    void AddLifecycleEventsFromNode(std::vector<ModelEvent::LifecycleEvent>& events,
             const std::string experiment_name, 
             const std::string& hostname,
             const NodeManager::Node& message);
-    void AddLifecycleEventsFromComponent(std::vector<re_common::LifecycleEvent>& events,
+    void AddLifecycleEventsFromComponent(std::vector<ModelEvent::LifecycleEvent>& events,
             const std::string experiment_name, 
             const std::string& hostname,
             const NodeManager::Component& message);
-    re_common::LifecycleEvent GenerateLifecycleEventFromPort(const std::string experiment_name, 
+    ModelEvent::LifecycleEvent GenerateLifecycleEventFromPort(const std::string experiment_name, 
             const std::string& hostname,
             const NodeManager::Port& message);
-    void FillModelEventComponent(re_common::Component* component, const NodeManager::Component& nm_component);
+    void FillModelEventComponent(ModelEvent::Component* component, const NodeManager::Component& nm_component);
 
 
 private:

@@ -14,26 +14,26 @@ public:
 
 private:
     // Model callbacks
-    //void ProcessUserEvent(const re_common::UserEvent& message);
-    void ProcessLifecycleEvent(const re_common::LifecycleEvent& message);
-    void ProcessWorkloadEvent(const re_common::WorkloadEvent& message);
-    void ProcessUtilizationEvent(const re_common::UtilizationEvent& message);
+    //void ProcessUserEvent(const ModelEvent::UserEvent& message);
+    void ProcessLifecycleEvent(const ModelEvent::LifecycleEvent& message);
+    void ProcessWorkloadEvent(const ModelEvent::WorkloadEvent& message);
+    void ProcessUtilizationEvent(const ModelEvent::UtilizationEvent& message);
 
     // Insertion helpers
-    void InsertComponentLifecycleEvent(const re_common::Info& info,
-            const re_common::LifecycleEvent_Type& type,
-            const re_common::Component& component);
+    void InsertComponentLifecycleEvent(const ModelEvent::Info& info,
+            const ModelEvent::LifecycleEvent_Type& type,
+            const ModelEvent::Component& component);
 
-    void InsertPortLifecycleEvent(const re_common::Info& info,
-            const re_common::LifecycleEvent_Type& type,
-            const re_common::Component& component,
-            const re_common::Port& port);
+    void InsertPortLifecycleEvent(const ModelEvent::Info& info,
+            const ModelEvent::LifecycleEvent_Type& type,
+            const ModelEvent::Component& component,
+            const ModelEvent::Port& port);
 
     // ID retrieval helpers
     int GetComponentID(const std::string& name, const std::string& experiment_name);
-    int GetComponentInstanceID(const re_common::Component& component_instance, const std::string& experiment_name);
-    int GetPortID(const re_common::Port& port, const re_common::Component& component, const std::string& experiment_name);
-    int GetWorkerInstanceID(const re_common::Component& component_instance, const std::string& worker_name, const std::string& experiment_name);
+    int GetComponentInstanceID(const ModelEvent::Component& component_instance, const std::string& experiment_name);
+    int GetPortID(const ModelEvent::Port& port, const ModelEvent::Component& component, const std::string& experiment_name);
+    int GetWorkerInstanceID(const ModelEvent::Component& component_instance, const std::string& worker_name, const std::string& experiment_name);
 
 };
 

@@ -30,7 +30,7 @@
 
 #include "sigarsysteminfo.h"
 
-#include <proto/systemstatus/systemstatus.pb.h>
+#include <proto/systemevent/systemevent.pb.h>
 #include <zmq/protowriter/cachedprotowriter.h>
 #include <zmq/protowriter/monitor.h>
 #include <google/protobuf/util/json_util.h>
@@ -56,7 +56,6 @@ std::string LogController::GetSystemInfoJson(){
 
     if(info){
         google::protobuf::util::MessageToJsonString(*info, &output, options);
-        delete info;
     }
 
     return output;
@@ -104,7 +103,7 @@ LogController::~LogController(){
     Stop();
 }
 
-void LogController::GotNewConnection(int, std::string){
+void LogController::GotNewConnection(int a, std::string b){
     //Enqueue
     QueueOneTimeInfo();
 }
@@ -118,6 +117,7 @@ void LogController::LogThread(const std::string& publisher_endpoint, const doubl
     State state = State::RUNNING;
     auto writer = live_mode ? std::unique_ptr<zmq::ProtoWriter>(new zmq::ProtoWriter()) : std::unique_ptr<zmq::ProtoWriter>(new zmq::CachedProtoWriter());
     {
+        
         {
             //Attach monitor
             auto monitor = std::unique_ptr<zmq::Monitor>(new zmq::Monitor());
@@ -141,6 +141,8 @@ void LogController::LogThread(const std::string& publisher_endpoint, const doubl
         if(state == State::S_ERROR){
             return;
         }
+
+        
         
         
         //Get the duration in milliseconds
@@ -172,7 +174,7 @@ void LogController::LogThread(const std::string& publisher_endpoint, const doubl
                 //Whenever a new server connects, send one time information, using our client address as the topic
                 std::lock_guard<std::mutex> lock(one_time_mutex_);
                 if(send_onetime_info_){
-                    auto message = std::unique_ptr<google::protobuf::MessageLite>(system_.GetSystemInfo(listener_id_));
+                    auto message = system_.GetSystemInfo(listener_id_);
                     if(message){
                         writer->PushMessage(std::move(message));
                         send_onetime_info_ = false;
@@ -183,8 +185,8 @@ void LogController::LogThread(const std::string& publisher_endpoint, const doubl
             {
                 system_.Update();
                 //Send the tick'd information to all servers
-                
-                auto message = std::unique_ptr<google::protobuf::MessageLite>(system_.GetSystemStatus(listener_id_));
+                auto message = system_.GetSystemStatus(listener_id_);
+                //message->PrintDebugString();
                 if(message){
                     writer->PushMessage(std::move(message));
                 }

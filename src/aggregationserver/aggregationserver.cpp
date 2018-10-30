@@ -13,6 +13,7 @@
 #include <boost/program_options.hpp>
 
 #include <google/protobuf/util/json_util.h>
+#include <google/protobuf/util/time_util.h>
 #include <random>
 
 #include <zmq/protowriter/protowriter.h>
@@ -28,6 +29,7 @@
 #include "databaseclient.h"
 #include "experimenttracker.h"
 
+using google::protobuf::util::TimeUtil;
 
 Execution execution;
 
@@ -137,7 +139,7 @@ AggregationServer::AggregationServer(const std::string& receiver_ip,
     receiver.Start();
 }
 
-void AggregationServer::AddLifecycleEventsFromNode(std::vector<re_common::LifecycleEvent>& events,
+void AggregationServer::AddLifecycleEventsFromNode(std::vector<ModelEvent::LifecycleEvent>& events,
             const std::string experiment_name, 
             const std::string& hostname,
             const NodeManager::Node& message) {
@@ -154,14 +156,14 @@ void AggregationServer::AddLifecycleEventsFromNode(std::vector<re_common::Lifecy
     }
 }
 
-void AggregationServer::AddLifecycleEventsFromComponent(std::vector<re_common::LifecycleEvent>& events,
+void AggregationServer::AddLifecycleEventsFromComponent(std::vector<ModelEvent::LifecycleEvent>& events,
             const std::string experiment_name, 
             const std::string& hostname,
             const NodeManager::Component& message) {
 
-    std::vector<re_common::LifecycleEvent> new_events;
+    std::vector<ModelEvent::LifecycleEvent> new_events;
 
-    auto&& new_lifecycle_event = re_common::LifecycleEvent();
+    auto&& new_lifecycle_event = ModelEvent::LifecycleEvent();
     new_events.emplace_back(new_lifecycle_event);
 
     for (const auto& port : message.ports()) {
@@ -175,15 +177,15 @@ void AggregationServer::AddLifecycleEventsFromComponent(std::vector<re_common::L
     events.insert(events.end(), new_events.begin(), new_events.end());
 }
 
-re_common::LifecycleEvent AggregationServer::GenerateLifecycleEventFromPort(/*std::vector<re_common::LifecycleEvent*>& events,*/
+ModelEvent::LifecycleEvent AggregationServer::GenerateLifecycleEventFromPort(/*std::vector<re_common::LifecycleEvent*>& events,*/
             const std::string experiment_name, 
             const std::string& hostname,
             const NodeManager::Port& message) {
 
-    re_common::LifecycleEvent new_lifecycle_event;
+    ModelEvent::LifecycleEvent new_lifecycle_event;
 
-    re_common::Port::Kind kind;
-    bool did_parse = re_common::Port::Kind_Parse(message.Kind_Name(message.kind()), &kind);
+    ModelEvent::Port::Kind kind;
+    bool did_parse = ModelEvent::Port::Kind_Parse(message.Kind_Name(message.kind()), &kind);
     if (!did_parse) {
         throw std::runtime_error("Failed to Parse the kind of a port");
     }
@@ -199,7 +201,7 @@ re_common::LifecycleEvent AggregationServer::GenerateLifecycleEventFromPort(/*st
     return new_lifecycle_event;
 }
 
-void AggregationServer::FillModelEventComponent(re_common::Component* component, const NodeManager::Component& nm_component) {
+void AggregationServer::FillModelEventComponent(ModelEvent::Component* component, const NodeManager::Component& nm_component) {
     auto&& location_vec = std::vector<std::string>(nm_component.location().begin(), nm_component.location().end());
     auto&& replication_vec = std::vector<int>(nm_component.replicate_indices().begin(), nm_component.replicate_indices().end());
     std::string full_location = AggServer::GetFullLocation(location_vec, replication_vec);
@@ -210,9 +212,9 @@ void AggregationServer::FillModelEventComponent(re_common::Component* component,
     component->set_type(nm_component.info().type());
 }
 
-std::vector<re_common::LifecycleEvent> AggregationServer::GenerateLifecyclesFromControlMessage(const NodeManager::ControlMessage& message) {
+std::vector<ModelEvent::LifecycleEvent> AggregationServer::GenerateLifecyclesFromControlMessage(const NodeManager::ControlMessage& message) {
 
-    std::vector<re_common::LifecycleEvent> events;
+    std::vector<ModelEvent::LifecycleEvent> events;
     
     for (const auto& node : message.nodes()) {
 
@@ -224,7 +226,7 @@ std::vector<re_common::LifecycleEvent> AggregationServer::GenerateLifecyclesFrom
     return events;
 }
 
-void AggregationServer::StimulatePorts(const std::vector<re_common::LifecycleEvent>& events, zmq::ProtoWriter& writer) {
+void AggregationServer::StimulatePorts(const std::vector<ModelEvent::LifecycleEvent>& events, zmq::ProtoWriter& writer) {
 
     try {
         auto&& port_id_results = database_client->GetValues(
@@ -259,10 +261,31 @@ void AggregationServer::StimulatePorts(const std::vector<re_common::LifecycleEve
             for (const auto& event : events) {
                 if (!event.has_port()) continue;
                 if (event.port().name() == port_name) {
-                    auto configured_event = std::unique_ptr<re_common::LifecycleEvent>(new re_common::LifecycleEvent(event));
-                    configured_event->set_type(re_common::LifecycleEvent::CONFIGURED);
-                    configured_event->mutable_info()->set_timestamp((rand()%1000000000)/1000000.0);
+                    const auto&& start_time = TimeUtil::MicrosecondsToTimestamp((rand()%1000000000));
+                    std::cout << start_time.DebugString() << std::endl;
+                    auto configured_event = std::unique_ptr<ModelEvent::LifecycleEvent>(new ModelEvent::LifecycleEvent(event));
+                    configured_event->set_type(ModelEvent::LifecycleEvent::CONFIGURED);
+                    configured_event->mutable_info()->set_allocated_timestamp(new google::protobuf::Timestamp(start_time));
+                    
+                    auto activated_event = std::unique_ptr<ModelEvent::LifecycleEvent>(new ModelEvent::LifecycleEvent(*configured_event));
+                    activated_event->set_type(ModelEvent::LifecycleEvent::ACTIVATED);
+                    auto activated_ts = activated_event->mutable_info()->mutable_timestamp();
+                    activated_ts->set_seconds(start_time.seconds()+5);
+
+                    auto passivated_event = std::unique_ptr<ModelEvent::LifecycleEvent>(new ModelEvent::LifecycleEvent(*configured_event));
+                    passivated_event->set_type(ModelEvent::LifecycleEvent::PASSIVATED);
+                    auto passivated_ts = activated_event->mutable_info()->mutable_timestamp();
+                    passivated_ts->set_seconds(start_time.seconds()+33);
+
+                    auto terminated_event = std::unique_ptr<ModelEvent::LifecycleEvent>(new ModelEvent::LifecycleEvent(*configured_event));
+                    terminated_event->set_type(ModelEvent::LifecycleEvent::TERMINATED);
+                    auto terminated_ts = activated_event->mutable_info()->mutable_timestamp();
+                    terminated_ts->set_seconds(start_time.seconds()+42);
+
                     bool success = writer.PushMessage(std::move(configured_event));
+                    success = writer.PushMessage(std::move(activated_event));
+                    success = writer.PushMessage(std::move(passivated_event));
+                    success = writer.PushMessage(std::move(terminated_event));
                     if (!success) {
                         std::cout << "Something went wrong pushing message" << std::endl;
                     }
