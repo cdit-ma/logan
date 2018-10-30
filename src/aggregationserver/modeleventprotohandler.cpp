@@ -8,22 +8,26 @@
 #include <zmq/protoreceiver/protoreceiver.h>
 #include <proto/modelevent/modelevent.pb.h>
 
+#include <google/protobuf/util/time_util.h>
+
 #include <functional>
 
+using google::protobuf::util::TimeUtil;
 
 void ModelEventProtoHandler::BindCallbacks(zmq::ProtoReceiver& receiver) {
-    //receiver.RegisterProtoCallback<re_common::UserEvent>(std::bind(&ModelEventProtoHandler::ProcessUserEvent, this, std::placeholders::_1));
-    receiver.RegisterProtoCallback<re_common::LifecycleEvent>(std::bind(&ModelEventProtoHandler::ProcessLifecycleEvent, this, std::placeholders::_1));
-    receiver.RegisterProtoCallback<re_common::WorkloadEvent>(std::bind(&ModelEventProtoHandler::ProcessWorkloadEvent, this, std::placeholders::_1));
-    receiver.RegisterProtoCallback<re_common::UtilizationEvent>(std::bind(&ModelEventProtoHandler::ProcessUtilizationEvent, this, std::placeholders::_1));
+    //receiver.RegisterProtoCallback<ModelEvent::UserEvent>(std::bind(&ModelEventProtoHandler::ProcessUserEvent, this, std::placeholders::_1));
+    
+    receiver.RegisterProtoCallback<ModelEvent::LifecycleEvent>(std::bind(&ModelEventProtoHandler::ProcessLifecycleEvent, this, std::placeholders::_1));
+    receiver.RegisterProtoCallback<ModelEvent::WorkloadEvent>(std::bind(&ModelEventProtoHandler::ProcessWorkloadEvent, this, std::placeholders::_1));
+    receiver.RegisterProtoCallback<ModelEvent::UtilizationEvent>(std::bind(&ModelEventProtoHandler::ProcessUtilizationEvent, this, std::placeholders::_1));
 }
 
 
-/*void ModelEventProtoHandler::ProcessUserEvent(const re_common::UserEvent& message){
+/*void ModelEventProtoHandler::ProcessUserEvent(const ModelEvent::UserEvent& message){
 
     int component_instance_id = GetComponentInstanceID(message.component(), message.info().experiment_name());
 
-    std::string type = re_common::UserEvent::Type_Name(message.type());
+    std::string type = ModelEvent::UserEvent::Type_Name(message.type());
     std::string sample_time = AggServer::FormatTimestamp(message.info().timestamp());
 
     database_->InsertValues(
@@ -33,7 +37,7 @@ void ModelEventProtoHandler::BindCallbacks(zmq::ProtoReceiver& receiver) {
     );
 }*/
 
-void ModelEventProtoHandler::ProcessLifecycleEvent(const re_common::LifecycleEvent& message){
+void ModelEventProtoHandler::ProcessLifecycleEvent(const ModelEvent::LifecycleEvent& message){
     if (message.has_component()) {
         if (message.has_port()) {
             try {
@@ -48,12 +52,13 @@ void ModelEventProtoHandler::ProcessLifecycleEvent(const re_common::LifecycleEve
 }
 
 
-void ModelEventProtoHandler::ProcessWorkloadEvent(const re_common::WorkloadEvent& message) {
+void ModelEventProtoHandler::ProcessWorkloadEvent(const ModelEvent::WorkloadEvent& message) {
     std::string worker_instance_id = std::to_string(GetWorkerInstanceID(message.component(), message.worker().name(), message.info().experiment_name()));
     std::string function = message.function_name();
-    std::string type = re_common::WorkloadEvent::Type_Name(message.event_type());
+    std::string type = ModelEvent::WorkloadEvent::Type_Name(message.event_type());
     std::string args = message.args();
-    std::string sample_time = AggServer::FormatTimestamp(message.info().timestamp());
+    //std::string sample_time = AggServer::FormatTimestamp(message.info().timestamp());
+    std::string sample_time = TimeUtil::ToString(message.info().timestamp());
 
     database_->InsertValues(
         "WorkloadEvent",
@@ -62,11 +67,12 @@ void ModelEventProtoHandler::ProcessWorkloadEvent(const re_common::WorkloadEvent
     );
 }
 
-void ModelEventProtoHandler::ProcessUtilizationEvent(const re_common::UtilizationEvent& message) {
+void ModelEventProtoHandler::ProcessUtilizationEvent(const ModelEvent::UtilizationEvent& message) {
     std::string port_id = std::to_string(GetPortID(message.port(), message.component(), message.info().experiment_name()));
     std::string seq_num = std::to_string(message.port_event_id());
-    std::string type = re_common::UtilizationEvent::Type_Name(message.type());
-    std::string sample_time = AggServer::FormatTimestamp(message.info().timestamp());
+    std::string type = ModelEvent::UtilizationEvent::Type_Name(message.type());
+    //std::string sample_time = AggServer::FormatTimestamp(message.info().timestamp());
+    std::string sample_time = TimeUtil::ToString(message.info().timestamp());
 
     database_->InsertValues(
         "PortEvent",
@@ -75,9 +81,9 @@ void ModelEventProtoHandler::ProcessUtilizationEvent(const re_common::Utilizatio
     );
 }
 
-void ModelEventProtoHandler::InsertComponentLifecycleEvent(const re_common::Info& info,
-                const re_common::LifecycleEvent_Type& type,
-                const re_common::Component& component) {
+void ModelEventProtoHandler::InsertComponentLifecycleEvent(const ModelEvent::Info& info,
+                const ModelEvent::LifecycleEvent_Type& type,
+                const ModelEvent::Component& component) {
 
     std::vector<std::string> columns = {
         "ComponentInstanceID",
@@ -87,16 +93,17 @@ void ModelEventProtoHandler::InsertComponentLifecycleEvent(const re_common::Info
 
     std::vector<std::string> values;
     values.emplace_back(std::to_string(GetComponentInstanceID(component, info.experiment_name())));
-    values.emplace_back(AggServer::FormatTimestamp(info.timestamp()));
+    //values.emplace_back(AggServer::FormatTimestamp(info.timestamp()));
+    values.emplace_back(TimeUtil::ToString(info.timestamp()));
     values.emplace_back(std::to_string(type));
 
     database_->InsertValues("ComponentLifecycleEvent", columns, values);
 }
 
-void ModelEventProtoHandler::InsertPortLifecycleEvent(const re_common::Info& info,
-                const re_common::LifecycleEvent_Type& type,
-                const re_common::Component& component,
-                const re_common::Port& port) {
+void ModelEventProtoHandler::InsertPortLifecycleEvent(const ModelEvent::Info& info,
+                const ModelEvent::LifecycleEvent_Type& type,
+                const ModelEvent::Component& component,
+                const ModelEvent::Port& port) {
 
     std::vector<std::string> columns = {
         "PortID",
@@ -106,7 +113,8 @@ void ModelEventProtoHandler::InsertPortLifecycleEvent(const re_common::Info& inf
 
     std::vector<std::string> values;
     values.emplace_back(std::to_string(GetPortID(port, component, info.experiment_name())));
-    values.emplace_back(database_->EscapeString(AggServer::FormatTimestamp(info.timestamp())));
+    //values.emplace_back(database_->EscapeString(AggServer::FormatTimestamp(info.timestamp())));
+    values.emplace_back(database_->EscapeString(TimeUtil::ToString(info.timestamp())));
     values.emplace_back(std::to_string(type));
 
     database_->InsertValues("PortLifecycleEvent", columns, values);
@@ -114,7 +122,7 @@ void ModelEventProtoHandler::InsertPortLifecycleEvent(const re_common::Info& inf
 
 
 
-int ModelEventProtoHandler::GetComponentInstanceID(const re_common::Component& component_instance, const std::string& experiment_name) {
+int ModelEventProtoHandler::GetComponentInstanceID(const ModelEvent::Component& component_instance, const std::string& experiment_name) {
     int component_id = GetComponentID(component_instance.type(), experiment_name);
 
     std::string&& comp_id = database_->EscapeString(std::to_string(component_id));
@@ -127,7 +135,7 @@ int ModelEventProtoHandler::GetComponentInstanceID(const re_common::Component& c
 }
 
 
-int ModelEventProtoHandler::GetPortID(const re_common::Port& port, const re_common::Component& component, const std::string& experiment_name) {
+int ModelEventProtoHandler::GetPortID(const ModelEvent::Port& port, const ModelEvent::Component& component, const std::string& experiment_name) {
 
     int component_instance_id = GetComponentInstanceID(component, experiment_name);
     
@@ -140,7 +148,7 @@ int ModelEventProtoHandler::GetPortID(const re_common::Port& port, const re_comm
     return database_->GetID("Port", condition_stream.str());
 }
 
-int ModelEventProtoHandler::GetWorkerInstanceID(const re_common::Component& component, const std::string& worker_name, const std::string& experiment_name) {
+int ModelEventProtoHandler::GetWorkerInstanceID(const ModelEvent::Component& component, const std::string& worker_name, const std::string& experiment_name) {
 
     int component_instance_id = GetComponentInstanceID(component, experiment_name);
 
