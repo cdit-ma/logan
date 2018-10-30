@@ -3,7 +3,7 @@
 
 #include "aggregationprotohandler.h"
 
-#include <proto/systemstatus/systemstatus.pb.h>
+#include <proto/systemevent/systemevent.pb.h>
 
 class SystemStatusProtoHandler : public AggregationProtoHandler {
 public:
@@ -14,8 +14,8 @@ public:
 
 private:
     // Hardware callbacks
-    void ProcessSystemStatus(const re_common::SystemStatus& status) {};
-    void ProcessSystemInfo(const re_common::SystemInfo& info) {};
+    void ProcessStatusEvent(const SystemEvent::StatusEvent& status) {};
+    void ProcessInfoEvent(const SystemEvent::InfoEvent& info) {};
 };
 
 
