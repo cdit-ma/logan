@@ -261,33 +261,26 @@ void AggregationServer::StimulatePorts(const std::vector<ModelEvent::LifecycleEv
             for (const auto& event : events) {
                 if (!event.has_port()) continue;
                 if (event.port().name() == port_name) {
-                    const auto&& start_time = TimeUtil::MicrosecondsToTimestamp((rand()%1000000000)/*/1000000.0*/);
+                    const auto&& start_time = TimeUtil::MicrosecondsToTimestamp((rand()%1000000000));
                     std::cout << start_time.DebugString() << std::endl;
                     auto configured_event = std::unique_ptr<ModelEvent::LifecycleEvent>(new ModelEvent::LifecycleEvent(event));
                     configured_event->set_type(ModelEvent::LifecycleEvent::CONFIGURED);
                     configured_event->mutable_info()->set_allocated_timestamp(new google::protobuf::Timestamp(start_time));
-
-                    //configured_event->mutable_info()->set_timestamp((rand()%1000000000)/1000000.0);
                     
                     auto activated_event = std::unique_ptr<ModelEvent::LifecycleEvent>(new ModelEvent::LifecycleEvent(*configured_event));
                     activated_event->set_type(ModelEvent::LifecycleEvent::ACTIVATED);
                     auto activated_ts = activated_event->mutable_info()->mutable_timestamp();
                     activated_ts->set_seconds(start_time.seconds()+5);
-                    //activated_event->mutable_info()->set_timestamp(activated_event->mutable_info()->timestamp()+5.0);
 
                     auto passivated_event = std::unique_ptr<ModelEvent::LifecycleEvent>(new ModelEvent::LifecycleEvent(*configured_event));
                     passivated_event->set_type(ModelEvent::LifecycleEvent::PASSIVATED);
                     auto passivated_ts = activated_event->mutable_info()->mutable_timestamp();
                     passivated_ts->set_seconds(start_time.seconds()+33);
-                    //passivated_ts->set_nanos(start_time.nanos()+500000000);
-                    //passivated_event->mutable_info()->set_timestamp(passivated_event->mutable_info()->timestamp()+33.5);
 
                     auto terminated_event = std::unique_ptr<ModelEvent::LifecycleEvent>(new ModelEvent::LifecycleEvent(*configured_event));
                     terminated_event->set_type(ModelEvent::LifecycleEvent::TERMINATED);
                     auto terminated_ts = activated_event->mutable_info()->mutable_timestamp();
                     terminated_ts->set_seconds(start_time.seconds()+42);
-                    //terminated_ts->set_nanos(start_time.nanos()+500000000);
-                    //terminated_event->mutable_info()->set_timestamp(terminated_event->mutable_info()->timestamp()+42.5);
 
                     bool success = writer.PushMessage(std::move(configured_event));
                     success = writer.PushMessage(std::move(activated_event));
