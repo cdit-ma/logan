@@ -18,7 +18,6 @@ AggServer::AggregationReplier::AggregationReplier(std::shared_ptr<DatabaseClient
 
 std::unique_ptr<AggServer::PortLifecycleResponse>
 AggServer::AggregationReplier::ProcessPortLifecycleRequest(const AggServer::PortLifecycleRequest& message) {
-    std::cerr << "Received PortLifecycleEventRequest" << std::endl;
 
     std::unique_ptr<AggServer::PortLifecycleResponse> response = std::unique_ptr<AggServer::PortLifecycleResponse>(
         new AggServer::PortLifecycleResponse()
@@ -56,8 +55,6 @@ AggServer::AggregationReplier::ProcessPortLifecycleRequest(const AggServer::Port
         condition_cols.emplace_back("Component.Name");
         condition_vals.emplace_back(component_name);
     }
-
-    std::cout << "Getting PortLifecycleEvents between " << start << " and " << end << std::endl;
 
     try {
         const pqxx::result res = database_->GetPortLifecycleEventInfo(start, end, condition_cols, condition_vals);
