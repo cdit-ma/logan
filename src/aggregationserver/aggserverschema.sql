@@ -37,7 +37,7 @@ DROP TABLE Hardware.InterfaceStatus;
 DROP TABLE Hardware.FilesystemStatus;
 
 
-DROP TABLE ClusteredNode;
+DROP TABLE Container;
 
 
 DROP TABLE Hardware.System;
@@ -55,19 +55,13 @@ DROP TABLE Hardware.Interface;
 DROP TABLE Hardware.Filesystem;
 
 
-DROP TABLE Node;
-
-
 DROP TABLE Worker;
 
 
 DROP TABLE Component;
 
 
-DROP TABLE Machine;
-
-
-DROP TABLE Cluster;
+DROP TABLE Node;
 
 
 DROP TABLE ExperimentRun;
@@ -123,6 +117,7 @@ CREATE TABLE Worker
  WorkerID        SERIAL ,
  Name            TEXT NOT NULL ,
  ExperimentRunID INT NOT NULL ,
+ GraphmlID       TEXT NOT NULL ,
 
 PRIMARY KEY (WorkerID),
 CONSTRAINT UniqueWorkerName UNIQUE (Name),
@@ -141,6 +136,7 @@ CREATE TABLE Component
  ComponentID     SERIAL ,
  Name            TEXT NOT NULL ,
  ExperimentRunID INT NOT NULL ,
+ GraphmlID       TEXT NOT NULL ,
 
 PRIMARY KEY (ComponentID),
 CONSTRAINT UniqueComponentNamePerRun UNIQUE (Name, ExperimentRunID),
@@ -152,16 +148,22 @@ CONSTRAINT FK_403 FOREIGN KEY (ExperimentRunID) REFERENCES ExperimentRun (Experi
 
 
 
--- ************************************** Machine
+-- ************************************** Node
 
-CREATE TABLE Machine
+CREATE TABLE Node
 (
- MachineID       SERIAL ,
+ NodeID          SERIAL ,
+ Hostname        TEXT NOT NULL ,
+ IP              INET NOT NULL ,
  ExperimentRunID INT NOT NULL ,
+ GraphmlID       TEXT NOT NULL ,
 
-PRIMARY KEY (MachineID),
-CONSTRAINT FK_368 FOREIGN KEY (ExperimentRunID) REFERENCES ExperimentRun (ExperimentRunID)
+PRIMARY KEY (NodeID),
+CONSTRAINT UniqueIP UNIQUE (IP, ExperimentRunID),
+CONSTRAINT FK_360 FOREIGN KEY (ExperimentRunID) REFERENCES ExperimentRun (ExperimentRunID)
 );
+
+
 
 
 
@@ -170,15 +172,17 @@ CONSTRAINT FK_368 FOREIGN KEY (ExperimentRunID) REFERENCES ExperimentRun (Experi
 
 -- ************************************** Cluster
 
-CREATE TABLE Cluster
+CREATE TABLE Container
 (
- ClusterID       SERIAL ,
+ ContainerID       SERIAL ,
+ NodeID          INT NOT NULL,
  Name            TEXT NOT NULL ,
- ExperimentRunID INT NOT NULL ,
+ GraphmlID       TEXT NOT NULL,
+ Type            TEXT NOT NULL,
 
 PRIMARY KEY (ClusterID),
-CONSTRAINT UniqueClusterNamePerRun UNIQUE (ExperimentRunID, Name),
-CONSTRAINT FK_356 FOREIGN KEY (ExperimentRunID) REFERENCES ExperimentRun (ExperimentRunID)
+CONSTRAINT UniqueClusterNamePerRun UNIQUE (NodeID, Name),
+CONSTRAINT FK_356 FOREIGN KEY (NodeID) REFERENCES Node (NodeID)
 );
 
 
@@ -203,10 +207,10 @@ CREATE TABLE Hardware.System
  CPUVendor      TEXT NOT NULL ,
  CPUFrequency   INT NOT NULL ,
  PhysicalMemory INT NOT NULL ,
- MachineID      INT NOT NULL ,
+ NodeID      INT NOT NULL ,
 
 PRIMARY KEY (SystemID),
-CONSTRAINT FK_373 FOREIGN KEY (MachineID) REFERENCES Machine (MachineID)
+CONSTRAINT FK_373 FOREIGN KEY (NodeID) REFERENCES Node (NodeID)
 );
 
 
@@ -223,10 +227,10 @@ CREATE TABLE Hardware.CPUStatus
  SampleTime      TIMESTAMP NOT NULL ,
  CoreID          INT NOT NULL ,
  CoreUtilisation DECIMAL NOT NULL ,
- MachineID       INT NOT NULL ,
+ NodeID       INT NOT NULL ,
 
 PRIMARY KEY (CPUStatusID),
-CONSTRAINT FK_385 FOREIGN KEY (MachineID) REFERENCES Machine (MachineID)
+CONSTRAINT FK_385 FOREIGN KEY (NodeID) REFERENCES Node (NodeID)
 );
 
 
@@ -245,10 +249,10 @@ CREATE TABLE Hardware.Process
  Args           TEXT NOT NULL ,
  StartTime      TIMESTAMP NOT NULL ,
  SampleTime     TIMESTAMP NOT NULL ,
- MachineID      INT NOT NULL ,
+ NodeID      INT NOT NULL ,
 
 PRIMARY KEY (ProcessID),
-CONSTRAINT FK_390 FOREIGN KEY (MachineID) REFERENCES Machine (MachineID)
+CONSTRAINT FK_390 FOREIGN KEY (NodeID) REFERENCES Node (NodeID)
 );
 
 
@@ -270,10 +274,10 @@ CREATE TABLE Hardware.Interface
  IPv6          INET NOT NULL ,
  MAC           MACADDR NOT NULL ,
  Speed         INT NOT NULL ,
- MachineID     INT NOT NULL ,
+ NodeID     INT NOT NULL ,
 
 PRIMARY KEY (InterfaceID),
-CONSTRAINT FK_381 FOREIGN KEY (MachineID) REFERENCES Machine (MachineID)
+CONSTRAINT FK_381 FOREIGN KEY (NodeID) REFERENCES Node (NodeID)
 );
 
 
@@ -291,31 +295,10 @@ CREATE TABLE Hardware.Filesystem
  Type           TEXT NOT NULL ,
  Size           INT NOT NULL ,
  SequenceNumber INT NOT NULL ,
- MachineID      INT NOT NULL ,
+ NodeID      INT NOT NULL ,
 
 PRIMARY KEY (FilesystemID),
-CONSTRAINT FK_377 FOREIGN KEY (MachineID) REFERENCES Machine (MachineID)
-);
-
-
-
-
-
-
--- ************************************** Node
-
-CREATE TABLE Node
-(
- NodeID          SERIAL ,
- Hostname        TEXT NOT NULL ,
- IP              INET NOT NULL ,
- MachineID       INT NOT NULL ,
- ExperimentRunID INT NOT NULL ,
-
-PRIMARY KEY (NodeID),
-CONSTRAINT UniqueIP UNIQUE (IP, ExperimentRunID),
-CONSTRAINT FK_346 FOREIGN KEY (MachineID) REFERENCES Machine (MachineID),
-CONSTRAINT FK_360 FOREIGN KEY (ExperimentRunID) REFERENCES ExperimentRun (ExperimentRunID)
+CONSTRAINT FK_377 FOREIGN KEY (NodeID) REFERENCES Node (NodeID)
 );
 
 
