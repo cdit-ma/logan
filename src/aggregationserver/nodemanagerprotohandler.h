@@ -17,9 +17,11 @@ private:
     void ProcessEnvironmentMessage(const NodeManager::EnvironmentMessage& message);
     void ProcessControlMessage(const NodeManager::ControlMessage& message);
     void ProcessNode(const NodeManager::Node& message, int experiment_run_id);
+    void ProcessContainer(const NodeManager::Container& message, int experiment_run_id, int node_id);
     void ProcessComponent(const NodeManager::Component& message, int experiment_run_id, int node_id);
     void ProcessPort(const NodeManager::Port& message, int component_instance_id, const std::string& component_instance_location);
     void ProcessWorker(const NodeManager::Worker& message, int experiment_run_id, int component_instance_id, const std::string& worker_path);
+    void ProcessLogger(const NodeManager::Logger& message, int experiment_run_id, int node_id, int component_instance_id=-1);
 };
 
 #endif

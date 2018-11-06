@@ -67,6 +67,7 @@ target_include_directories(${PROJ_NAME} PRIVATE ${RE_COMMON_SOURCE_DIR})
 
 
 target_link_libraries(${PROJ_NAME} zmq_protoreceiver)
+target_link_libraries(${PROJ_NAME} zmq_protorequester)
 target_link_libraries(${PROJ_NAME} zmq_protowriter)
 target_link_libraries(${PROJ_NAME} re_common_proto_modelevent)
 target_link_libraries(${PROJ_NAME} re_common_proto_control)

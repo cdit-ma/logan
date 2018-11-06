@@ -13,7 +13,12 @@
 
 
 void NodeManagerProtoHandler::BindCallbacks(zmq::ProtoReceiver& receiver) {
-    receiver.RegisterProtoCallback<NodeManager::ControlMessage>(std::bind(&NodeManagerProtoHandler::ProcessControlMessage, this, std::placeholders::_1));
+    receiver.RegisterProtoCallback<NodeManager::ControlMessage>(
+        std::bind(&NodeManagerProtoHandler::ProcessControlMessage, this, std::placeholders::_1)
+    );
+    receiver.RegisterProtoCallback<NodeManager::EnvironmentMessage>(
+        std::bind(&NodeManagerProtoHandler::ProcessEnvironmentMessage, this, std::placeholders::_1)
+    );
 }
 
 
@@ -21,6 +26,7 @@ void NodeManagerProtoHandler::BindCallbacks(zmq::ProtoReceiver& receiver) {
 void NodeManagerProtoHandler::ProcessEnvironmentMessage(const NodeManager::EnvironmentMessage& message) {
     switch (message.type()) {
         case NodeManager::EnvironmentMessage::CONFIGURE_EXPERIMENT:
+        case NodeManager::EnvironmentMessage::GET_EXPERIMENT_INFO:
         {
             ProcessControlMessage(message.control_message());
             return;
@@ -41,24 +47,24 @@ void NodeManagerProtoHandler::ProcessControlMessage(const NodeManager::ControlMe
 }
 
 void NodeManagerProtoHandler::ProcessNode(const NodeManager::Node& message, int experiment_run_id) {
-    switch (message.type()) {
+    //switch (message.type()) {
         // For anything containing nodes just process their children
-        case NodeManager::Node::HARDWARE_CLUSTER:
+        /*case NodeManager::Node::HARDWARE_CLUSTER:
         case NodeManager::Node::DOCKER_CLUSTER: {
             for (const auto& node : message.nodes()) {
                 ProcessNode(node, experiment_run_id);
             }
 
             break;
-        }
+        }*/
 
         // For any leaf nodes insert into the DB
-        case NodeManager::Node::HARDWARE_NODE:
+        /*case NodeManager::Node::HARDWARE_NODE:
         case NodeManager::Node::DOCKER_NODE:
-        case NodeManager::Node::OPEN_CL: {
+        case NodeManager::Node::OPEN_CL: {*/
             std::string hostname = message.info().name();
             std::cout << hostname << std::endl;
-            std::string ip = NodeManager::GetAttribute(message.attributes(), "ip_address").s(0);
+            std::string ip = message.ip_address();//NodeManager::GetAttribute(message.attributes(), "ip_address").s(0);
             std::cout << "ip address " << ip <<std::endl; 
 
             // NOTE: at the moment all nodes live on their own machine
@@ -75,18 +81,24 @@ void NodeManagerProtoHandler::ProcessNode(const NodeManager::Node& message, int 
                 {"IP", "ExperimentRunID"}
             );
 
-            for (const auto& component : message.components()) {
-                ProcessComponent(component, experiment_run_id, node_id);
+            for (const auto& container : message.containers()) {
+                ProcessContainer(container, experiment_run_id, node_id);
             }
 
-            break;
-        }
+       /*     break;
+        }*/
         
-        default:
+    /*    default:
             std::cerr << "Encountered unknown node type " << NodeManager::Node::NodeType_Name(message.type()) << std::endl;
-    }
+    }*/
 
     //message.info().type();
+}
+
+void NodeManagerProtoHandler::ProcessContainer(const NodeManager::Container& message, int experiment_run_id, int node_id) {
+    for (const auto& component : message.components()) {
+        ProcessComponent(component, experiment_run_id, node_id);
+    }
 }
 
 void NodeManagerProtoHandler::ProcessComponent(const NodeManager::Component& message, int experiment_run_id, int node_id) {
