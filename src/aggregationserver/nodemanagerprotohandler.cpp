@@ -31,6 +31,11 @@ void NodeManagerProtoHandler::ProcessEnvironmentMessage(const NodeManager::Envir
             ProcessControlMessage(message.control_message());
             return;
         }
+        case NodeManager::EnvironmentMessage::SHUTDOWN_EXPERIMENT:
+        {
+            // TODO: Handle server shutdown properly
+            throw std::logic_error("Shutdown handling not implemented");
+        }
     }
 }
 
@@ -47,61 +52,44 @@ void NodeManagerProtoHandler::ProcessControlMessage(const NodeManager::ControlMe
 }
 
 void NodeManagerProtoHandler::ProcessNode(const NodeManager::Node& message, int experiment_run_id) {
-    //switch (message.type()) {
-        // For anything containing nodes just process their children
-        /*case NodeManager::Node::HARDWARE_CLUSTER:
-        case NodeManager::Node::DOCKER_CLUSTER: {
-            for (const auto& node : message.nodes()) {
-                ProcessNode(node, experiment_run_id);
-            }
+    
+    std::string hostname = message.info().name();
+    //std::cout << hostname << std::endl;
+    std::string ip = message.ip_address();
+    std::string graphml_id = message.info().id();
+    //std::cout << "ip address " << ip <<std::endl;
 
-            break;
-        }*/
+    int node_id = database_->InsertValuesUnique(
+        "Node",
+        {"ExperimentRunID", "IP", "Hostname, GraphmlID"},
+        {std::to_string(experiment_run_id), ip, hostname},
+        {"IP", "ExperimentRunID"}
+    );
 
-        // For any leaf nodes insert into the DB
-        /*case NodeManager::Node::HARDWARE_NODE:
-        case NodeManager::Node::DOCKER_NODE:
-        case NodeManager::Node::OPEN_CL: {*/
-            std::string hostname = message.info().name();
-            std::cout << hostname << std::endl;
-            std::string ip = message.ip_address();//NodeManager::GetAttribute(message.attributes(), "ip_address").s(0);
-            std::cout << "ip address " << ip <<std::endl; 
-
-            // NOTE: at the moment all nodes live on their own machine
-            int machine_id = database_->InsertValues(
-                "Machine",
-                {"ExperimentRunID"},
-                {std::to_string(experiment_run_id)}
-            );
-
-            int node_id = database_->InsertValuesUnique(
-                "Node",
-                {"ExperimentRunID", "MachineID", "IP", "Hostname"},
-                {std::to_string(experiment_run_id), std::to_string(machine_id), ip, hostname},
-                {"IP", "ExperimentRunID"}
-            );
-
-            for (const auto& container : message.containers()) {
-                ProcessContainer(container, experiment_run_id, node_id);
-            }
-
-       /*     break;
-        }*/
-        
-    /*    default:
-            std::cerr << "Encountered unknown node type " << NodeManager::Node::NodeType_Name(message.type()) << std::endl;
-    }*/
-
-    //message.info().type();
-}
-
-void NodeManagerProtoHandler::ProcessContainer(const NodeManager::Container& message, int experiment_run_id, int node_id) {
-    for (const auto& component : message.components()) {
-        ProcessComponent(component, experiment_run_id, node_id);
+    for (const auto& container : message.containers()) {
+        ProcessContainer(container, experiment_run_id, node_id);
     }
 }
 
-void NodeManagerProtoHandler::ProcessComponent(const NodeManager::Component& message, int experiment_run_id, int node_id) {
+void NodeManagerProtoHandler::ProcessContainer(const NodeManager::Container& message, int experiment_run_id, int node_id) {
+    
+    std::string name = message.info().name();
+    std::string graphml_id = message.info().id();
+    std::string type = NodeManager::Container::ContainerType_Name(message.type());
+    
+    int container_id = database_->InsertValuesUnique(
+        "Container",
+        {"NodeID", "Name", "GraphmlID", "Type"},
+        {std::to_string(node_id), name, graphml_id, type},
+        {"NodeID", "GraphmlID"}
+    );
+
+    for (const auto& component : message.components()) {
+        ProcessComponent(component, experiment_run_id, container_id);
+    }
+}
+
+void NodeManagerProtoHandler::ProcessComponent(const NodeManager::Component& message, int experiment_run_id, int container_id) {
     if (message.location_size() != message.replicate_indices_size()) {
             // NOTE: sizes dont match
             throw std::runtime_error(std::string("Mismatch in size of replication and location vectors for component ").append(message.info().name()));
@@ -109,38 +97,20 @@ void NodeManagerProtoHandler::ProcessComponent(const NodeManager::Component& mes
 
     int component_id = database_->InsertValuesUnique(
         "Component",
-        {"Name", "ExperimentRunID"},
-        {message.info().type(), std::to_string(experiment_run_id)},
+        {"Name", "ExperimentRunID", "GraphmlID"},
+        {message.info().type(), std::to_string(experiment_run_id), message.info().id()},
         {"Name", "ExperimentRunID"}
     );
 
     std::string full_location;
-    /*for (const std::string& str : message.location()) {
-        full_location.append(str).append("/");
-    }*/
-    /*std::transform(
-        message.location().begin(), message.location().end(),
-        message.replicate_indices().begin(), message.replicate_indices().end(),
-        [&full_location](const std::string& str, int rep_index) {
-            full_location.append(str).append("_").append(std::to_string(rep_index));
-            return true;
-        }
-    );*/
-    /*auto loc_iter = message.location().begin();
-    auto rep_iter = message.replicate_indices().begin();
-    while (loc_iter != message.location().end() || rep_iter != message.replicate_indices().end()) {
-        full_location.append(*loc_iter).append("_").append(std::to_string(*rep_iter));
-        loc_iter++;
-        rep_iter++;
-    }*/
     auto&& location_vec = std::vector<std::string>(message.location().begin(), message.location().end());
     auto&& replication_vec = std::vector<int>(message.replicate_indices().begin(), message.replicate_indices().end());
     full_location = AggServer::GetFullLocation(location_vec, replication_vec);
 
     int component_instance_id = database_->InsertValuesUnique(
         "ComponentInstance",
-        {"ComponentID", "Path", "Name", "NodeID"},
-        {std::to_string(component_id), full_location, message.info().name(), std::to_string(node_id)},
+        {"ComponentID", "Path", "Name", "ContainerID"},
+        {std::to_string(component_id), full_location, message.info().name(), std::to_string(container_id)},
         {"Path", "ComponentID"} // Unique path per componentID -> Unique path per ExperimentRunID
     );
 
@@ -173,8 +143,8 @@ void NodeManagerProtoHandler::ProcessWorker(const NodeManager::Worker& message, 
 
     int worker_id = database_->InsertValuesUnique(
         "Worker",
-        {"Name", "ExperimentRunID"},
-        {message.info().type(), std::to_string(experiment_run_id)},
+        {"Name", "ExperimentRunID", "GraphmlID"},
+        {message.info().type(), std::to_string(experiment_run_id), message.info().type()},
         {"Name"}
     );
 

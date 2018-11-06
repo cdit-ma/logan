@@ -160,13 +160,6 @@ void AggregationServer::AddLifecycleEventsFromNode(std::vector<ModelEvent::Lifec
     for (const auto& container : message.containers()) {
          AddLifecycleEventsFromContainers(events, experiment_name, hostname, container);
     }
-
-    // Recurse through sub-nodes
-    //if (message.nodes_size() == 0) return;
-    /*for (const auto& node : message.nodes()) {
-        std::cerr << "We in the loop" << std::endl;
-        AddLifecycleEventsFromNode(events, experiment_name, hostname, node);
-    }*/
 }
 
 void AggregationServer::AddLifecycleEventsFromContainers(std::vector<ModelEvent::LifecycleEvent>& events,
