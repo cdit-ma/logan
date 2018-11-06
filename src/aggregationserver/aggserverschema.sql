@@ -180,8 +180,8 @@ CREATE TABLE Container
  GraphmlID       TEXT NOT NULL,
  Type            TEXT NOT NULL,
 
-PRIMARY KEY (ClusterID),
-CONSTRAINT UniqueClusterNamePerRun UNIQUE (NodeID, Name),
+PRIMARY KEY (ContainerID),
+CONSTRAINT UniqueGraphmlIDPerRun UNIQUE (NodeID, GraphmlID),
 CONSTRAINT FK_356 FOREIGN KEY (NodeID) REFERENCES Node (NodeID)
 );
 
