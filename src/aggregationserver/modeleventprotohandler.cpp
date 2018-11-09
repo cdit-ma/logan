@@ -38,6 +38,7 @@ void ModelEventProtoHandler::BindCallbacks(zmq::ProtoReceiver& receiver) {
 }*/
 
 void ModelEventProtoHandler::ProcessLifecycleEvent(const ModelEvent::LifecycleEvent& message){
+    std::cerr << "InsertPortLifecycleEvent" << std::endl;
     if (message.has_component()) {
         if (message.has_port()) {
             try {
@@ -53,6 +54,8 @@ void ModelEventProtoHandler::ProcessLifecycleEvent(const ModelEvent::LifecycleEv
 
 
 void ModelEventProtoHandler::ProcessWorkloadEvent(const ModelEvent::WorkloadEvent& message) {
+    std::cerr << "ProcessWorkloadEvent" << std::endl;
+
     std::string worker_instance_id = std::to_string(GetWorkerInstanceID(message.component(), message.worker().name(), message.info().experiment_name()));
     std::string function = message.function_name();
     std::string type = ModelEvent::WorkloadEvent::Type_Name(message.event_type());
@@ -68,6 +71,7 @@ void ModelEventProtoHandler::ProcessWorkloadEvent(const ModelEvent::WorkloadEven
 }
 
 void ModelEventProtoHandler::ProcessUtilizationEvent(const ModelEvent::UtilizationEvent& message) {
+    std::cerr << "ProcessUtilizationEvent" << std::endl;
     std::string port_id = std::to_string(GetPortID(message.port(), message.component(), message.info().experiment_name()));
     std::string seq_num = std::to_string(message.port_event_id());
     std::string type = ModelEvent::UtilizationEvent::Type_Name(message.type());
@@ -84,7 +88,7 @@ void ModelEventProtoHandler::ProcessUtilizationEvent(const ModelEvent::Utilizati
 void ModelEventProtoHandler::InsertComponentLifecycleEvent(const ModelEvent::Info& info,
                 const ModelEvent::LifecycleEvent_Type& type,
                 const ModelEvent::Component& component) {
-
+                
     std::vector<std::string> columns = {
         "ComponentInstanceID",
         "SampleTime",
@@ -105,6 +109,8 @@ void ModelEventProtoHandler::InsertPortLifecycleEvent(const ModelEvent::Info& in
                 const ModelEvent::Component& component,
                 const ModelEvent::Port& port) {
 
+    
+
     std::vector<std::string> columns = {
         "PortID",
         "SampleTime",
@@ -114,7 +120,8 @@ void ModelEventProtoHandler::InsertPortLifecycleEvent(const ModelEvent::Info& in
     std::vector<std::string> values;
     values.emplace_back(std::to_string(GetPortID(port, component, info.experiment_name())));
     //values.emplace_back(database_->EscapeString(AggServer::FormatTimestamp(info.timestamp())));
-    values.emplace_back(database_->EscapeString(TimeUtil::ToString(info.timestamp())));
+    values.emplace_back(TimeUtil::ToString(info.timestamp()));
+    std::cout << TimeUtil::ToString(info.timestamp()) << std::endl;
     values.emplace_back(std::to_string(type));
 
     database_->InsertValues("PortLifecycleEvent", columns, values);
@@ -126,10 +133,10 @@ int ModelEventProtoHandler::GetComponentInstanceID(const ModelEvent::Component& 
     int component_id = GetComponentID(component_instance.type(), experiment_name);
 
     std::string&& comp_id = database_->EscapeString(std::to_string(component_id));
-    std::string&& path = database_->EscapeString(component_instance.id()); // Needs to be updated to use the proper path
+    std::string&& graphml_id = database_->EscapeString(component_instance.id()); // Needs to be updated to use the proper path
 
     std::stringstream condition_stream;
-    condition_stream << "ComponentID = " << comp_id << " AND Path = " << path; 
+    condition_stream << "ComponentID = " << comp_id << " AND GraphmlID = " << graphml_id; 
 
     return database_->GetID("ComponentInstance", condition_stream.str());
 }

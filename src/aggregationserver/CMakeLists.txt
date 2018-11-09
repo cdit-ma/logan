@@ -19,7 +19,7 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/aggregationprotohandler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodemanagerprotohandler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/modeleventprotohandler.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/systemstatusprotohandler.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/systemeventprotohandler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/databaseclient.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/experimenttracker.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp
@@ -30,7 +30,7 @@ set(HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/aggregationprotohandler.h
     ${CMAKE_CURRENT_SOURCE_DIR}/nodemanagerprotohandler.h
     ${CMAKE_CURRENT_SOURCE_DIR}/modeleventprotohandler.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/systemstatusprotohandler.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/systemeventprotohandler.h
 	${CMAKE_CURRENT_SOURCE_DIR}/databaseclient.h
     ${CMAKE_CURRENT_SOURCE_DIR}/experimenttracker.h
     ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
@@ -67,6 +67,7 @@ target_include_directories(${PROJ_NAME} PRIVATE ${RE_COMMON_SOURCE_DIR})
 
 
 target_link_libraries(${PROJ_NAME} zmq_protoreceiver)
+target_link_libraries(${PROJ_NAME} zmq_protorequester)
 target_link_libraries(${PROJ_NAME} zmq_protowriter)
 target_link_libraries(${PROJ_NAME} re_common_proto_modelevent)
 target_link_libraries(${PROJ_NAME} re_common_proto_control)

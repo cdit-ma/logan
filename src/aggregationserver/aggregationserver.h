@@ -5,9 +5,13 @@
 
 #include <util/execution.hpp>
 
+#include <zmq/protorequester/protorequester.hpp>
+#include "experimenttracker.h"
+
 class DatabaseClient;
 
 class AggregationProtoHandler;
+
 
 namespace ModelEvent {
     class LifecycleEvent;
@@ -16,6 +20,7 @@ namespace ModelEvent {
 }
 namespace NodeManager {
     class ControlMessage;
+    class Container;
     class Node;
     class Component;
     class Port;
@@ -26,9 +31,8 @@ public:
 
     AggregationServer(const std::string& receiver_ip,
             const std::string& database_ip,
-            const std::string& password);
-
-    void LogComponentLifecycleEvent(const std::string& timeofday, const std::string& hostname, int id, int core_id, double core_utilisation);
+            const std::string& password,
+            const std::string& environment_endpoint);
     
     void StimulatePorts(const std::vector<ModelEvent::LifecycleEvent>& events, zmq::ProtoWriter& writer);
 
@@ -37,8 +41,12 @@ public:
             const std::string experiment_name, 
             const std::string& hostname,
             const NodeManager::Node& message);
+    void AddLifecycleEventsFromContainers(std::vector<ModelEvent::LifecycleEvent>& events,
+            const std::string& experiment_name, 
+            const std::string& hostname,
+            const NodeManager::Container& message);
     void AddLifecycleEventsFromComponent(std::vector<ModelEvent::LifecycleEvent>& events,
-            const std::string experiment_name, 
+            const std::string& experiment_name, 
             const std::string& hostname,
             const NodeManager::Component& message);
     ModelEvent::LifecycleEvent GenerateLifecycleEventFromPort(const std::string experiment_name, 
@@ -52,9 +60,12 @@ private:
     zmq::ProtoReceiver receiver;
     std::shared_ptr<DatabaseClient> database_client;
 
+    std::unique_ptr<zmq::ProtoRequester> env_requester;
+    std::unique_ptr<ExperimentTracker>  experiment_tracker;
+
     std::unique_ptr<AggregationProtoHandler> nodemanager_protohandler;
     std::unique_ptr<AggregationProtoHandler> modelevent_protohandler;
-    std::unique_ptr<AggregationProtoHandler> systemstatus_protohandler;
+    std::unique_ptr<AggregationProtoHandler> systemevent_protohandler;
 };
 
 #endif 

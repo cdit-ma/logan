@@ -11,19 +11,33 @@
 
 #include <functional>
 
+#include <zmq/zmqutils.hpp>
+
 
 void NodeManagerProtoHandler::BindCallbacks(zmq::ProtoReceiver& receiver) {
-    receiver.RegisterProtoCallback<NodeManager::ControlMessage>(std::bind(&NodeManagerProtoHandler::ProcessControlMessage, this, std::placeholders::_1));
+    receiver.RegisterProtoCallback<NodeManager::ControlMessage>(
+        std::bind(&NodeManagerProtoHandler::ProcessControlMessage, this, std::placeholders::_1)
+    );
+    receiver.RegisterProtoCallback<NodeManager::EnvironmentMessage>(
+        std::bind(&NodeManagerProtoHandler::ProcessEnvironmentMessage, this, std::placeholders::_1)
+    );
 }
 
 
 
 void NodeManagerProtoHandler::ProcessEnvironmentMessage(const NodeManager::EnvironmentMessage& message) {
+    std::cout << "OMG IS A TEST" << std::endl;
     switch (message.type()) {
         case NodeManager::EnvironmentMessage::CONFIGURE_EXPERIMENT:
+        case NodeManager::EnvironmentMessage::GET_EXPERIMENT_INFO:
         {
             ProcessControlMessage(message.control_message());
             return;
+        }
+        case NodeManager::EnvironmentMessage::SHUTDOWN_EXPERIMENT:
+        {
+            // TODO: Handle server shutdown properly
+            throw std::logic_error("Shutdown handling not implemented");
         }
     }
 }
@@ -31,104 +45,100 @@ void NodeManagerProtoHandler::ProcessEnvironmentMessage(const NodeManager::Envir
 void NodeManagerProtoHandler::ProcessControlMessage(const NodeManager::ControlMessage& message) {
     switch(message.type()) {
         default: {      // NOTE: For the moment we treat all message equally
-            int exp_run_id = experiment_tracker_->RegisterExperimentRun(message.experiment_id(), message.time_stamp());
+            std::cout << "Registering experiment run with ID " << message.experiment_id() << std::endl;
+            int experiment_id = experiment_tracker_.RegisterExperimentRun(message.experiment_id(), message.time_stamp());
+            std::cerr << "Got Experiment ID: " << experiment_id << std::endl;
 
             for (const auto& node : message.nodes()) {
-                ProcessNode(node, exp_run_id);
+                ProcessNode(node, experiment_id);
             }
+
+            experiment_tracker_.StartExperimentLoggerReceivers(experiment_id);
         }
     }
 }
 
-void NodeManagerProtoHandler::ProcessNode(const NodeManager::Node& message, int experiment_run_id) {
+void NodeManagerProtoHandler::ProcessNode(const NodeManager::Node& message, int experiment_id) {
+    int experiment_run_id = experiment_tracker_.GetCurrentRunID(experiment_id);
+    std::string hostname = message.info().name();
+    //std::cout << hostname << std::endl;
+    std::string ip = message.ip_address();
+    std::string graphml_id = message.info().id();
+    //std::cout << "ip address " << ip <<std::endl;
+
+    int node_id = database_->InsertValuesUnique(
+        "Node",
+        {"ExperimentRunID", "IP", "Hostname", "GraphmlID"},
+        {std::to_string(experiment_run_id), ip, hostname, graphml_id},
+        {"IP", "ExperimentRunID"}
+    );
+
+    for (const auto& container : message.containers()) {
+        ProcessContainer(container, experiment_id, node_id);
+    }
+}
+
+void NodeManagerProtoHandler::ProcessContainer(const NodeManager::Container& message, int experiment_id, int node_id) {
+    
+    std::string name = message.info().name();
+    std::string graphml_id = message.info().id();
+    std::string type = NodeManager::Container::ContainerType_Name(message.type());
+    
+    int container_id = database_->InsertValuesUnique(
+        "Container",
+        {"NodeID", "Name", "GraphmlID", "Type"},
+        {std::to_string(node_id), name, graphml_id, type},
+        {"NodeID", "GraphmlID"}
+    );
+
+    for (const auto& component : message.components()) {
+        ProcessComponent(component, experiment_id, container_id);
+    }
+
+    for (const auto& logger : message.loggers()) {
+        ProcessLogger(logger, experiment_id);
+    }
+}
+
+void NodeManagerProtoHandler::ProcessLogger(const NodeManager::Logger& message, int experiment_id) {
+    const auto& endpoint = zmq::TCPify(message.publisher_address(), message.publisher_port());
     switch (message.type()) {
-        // For anything containing nodes just process their children
-        case NodeManager::Node::HARDWARE_CLUSTER:
-        case NodeManager::Node::DOCKER_CLUSTER: {
-            for (const auto& node : message.nodes()) {
-                ProcessNode(node, experiment_run_id);
-            }
-
+        case NodeManager::Logger_Type::Logger_Type_CLIENT:{
+            experiment_tracker_.RegisterSystemEventProducer(experiment_id, endpoint);
             break;
         }
-
-        // For any leaf nodes insert into the DB
-        case NodeManager::Node::HARDWARE_NODE:
-        case NodeManager::Node::DOCKER_NODE:
-        case NodeManager::Node::OPEN_CL: {
-            std::string hostname = message.info().name();
-            std::cout << hostname << std::endl;
-            std::string ip = NodeManager::GetAttribute(message.attributes(), "ip_address").s(0);
-            std::cout << "ip address " << ip <<std::endl; 
-
-            // NOTE: at the moment all nodes live on their own machine
-            int machine_id = database_->InsertValues(
-                "Machine",
-                {"ExperimentRunID"},
-                {std::to_string(experiment_run_id)}
-            );
-
-            int node_id = database_->InsertValuesUnique(
-                "Node",
-                {"ExperimentRunID", "MachineID", "IP", "Hostname"},
-                {std::to_string(experiment_run_id), std::to_string(machine_id), ip, hostname},
-                {"IP", "ExperimentRunID"}
-            );
-
-            for (const auto& component : message.components()) {
-                ProcessComponent(component, experiment_run_id, node_id);
-            }
-
+        case NodeManager::Logger_Type::Logger_Type_MODEL:{
+            experiment_tracker_.RegisterModelEventProducer(experiment_id, endpoint);
             break;
         }
-        
-        default:
-            std::cerr << "Encountered unknown node type " << NodeManager::Node::NodeType_Name(message.type()) << std::endl;
+        default :
+         std::cout << "Found a logger but we don't care lol" << std::endl;
     }
-
-    //message.info().type();
 }
 
-void NodeManagerProtoHandler::ProcessComponent(const NodeManager::Component& message, int experiment_run_id, int node_id) {
+void NodeManagerProtoHandler::ProcessComponent(const NodeManager::Component& message, int experiment_id, int container_id) {
     if (message.location_size() != message.replicate_indices_size()) {
             // NOTE: sizes dont match
             throw std::runtime_error(std::string("Mismatch in size of replication and location vectors for component ").append(message.info().name()));
     }
+    auto experiment_run_id = experiment_tracker_.GetCurrentRunID(experiment_id);
 
     int component_id = database_->InsertValuesUnique(
         "Component",
-        {"Name", "ExperimentRunID"},
-        {message.info().type(), std::to_string(experiment_run_id)},
+        {"Name", "ExperimentRunID", "GraphmlID"},
+        {message.info().type(), std::to_string(experiment_run_id), message.info().id()},
         {"Name", "ExperimentRunID"}
     );
 
     std::string full_location;
-    /*for (const std::string& str : message.location()) {
-        full_location.append(str).append("/");
-    }*/
-    /*std::transform(
-        message.location().begin(), message.location().end(),
-        message.replicate_indices().begin(), message.replicate_indices().end(),
-        [&full_location](const std::string& str, int rep_index) {
-            full_location.append(str).append("_").append(std::to_string(rep_index));
-            return true;
-        }
-    );*/
-    /*auto loc_iter = message.location().begin();
-    auto rep_iter = message.replicate_indices().begin();
-    while (loc_iter != message.location().end() || rep_iter != message.replicate_indices().end()) {
-        full_location.append(*loc_iter).append("_").append(std::to_string(*rep_iter));
-        loc_iter++;
-        rep_iter++;
-    }*/
     auto&& location_vec = std::vector<std::string>(message.location().begin(), message.location().end());
     auto&& replication_vec = std::vector<int>(message.replicate_indices().begin(), message.replicate_indices().end());
     full_location = AggServer::GetFullLocation(location_vec, replication_vec);
 
     int component_instance_id = database_->InsertValuesUnique(
         "ComponentInstance",
-        {"ComponentID", "Path", "Name", "NodeID"},
-        {std::to_string(component_id), full_location, message.info().name(), std::to_string(node_id)},
+        {"ComponentID", "Path", "Name", "ContainerID", "GraphmlID"},
+        {std::to_string(component_id), full_location, message.info().name(), std::to_string(container_id), message.info().id()},
         {"Path", "ComponentID"} // Unique path per componentID -> Unique path per ExperimentRunID
     );
 
@@ -137,7 +147,7 @@ void NodeManagerProtoHandler::ProcessComponent(const NodeManager::Component& mes
     }
     
     for(const auto& worker : message.workers()) {
-        ProcessWorker(worker, experiment_run_id, component_instance_id, full_location);
+        ProcessWorker(worker, experiment_id, component_instance_id, full_location);
     }
 }
 
@@ -151,18 +161,18 @@ void NodeManagerProtoHandler::ProcessPort(const NodeManager::Port& message, int 
 
     int port_id = database_->InsertValuesUnique(
         "Port",
-        {"Name", "ComponentInstanceID", "Path", "Kind", "Type", "Middleware"},
-        {message.info().name(), std::to_string(component_instance_id), port_path, port_kind, port_type, middleware},
+        {"Name", "ComponentInstanceID", "Path", "Kind", "Type", "Middleware", "GraphmlID"},
+        {message.info().name(), std::to_string(component_instance_id), port_path, port_kind, port_type, middleware, message.info().id()},
         {"Name", "ComponentInstanceID"}
     );
 }
 
-void NodeManagerProtoHandler::ProcessWorker(const NodeManager::Worker& message, int experiment_run_id, int component_id, const std::string& component_path) {
-
+void NodeManagerProtoHandler::ProcessWorker(const NodeManager::Worker& message, int experiment_id, int component_id, const std::string& component_path) {
+    auto experiment_run_id = experiment_tracker_.GetCurrentRunID(experiment_id);
     int worker_id = database_->InsertValuesUnique(
         "Worker",
-        {"Name", "ExperimentRunID"},
-        {message.info().type(), std::to_string(experiment_run_id)},
+        {"Name", "ExperimentRunID", "GraphmlID"},
+        {message.info().type(), std::to_string(experiment_run_id), message.info().type()},
         {"Name"}
     );
 
@@ -170,8 +180,8 @@ void NodeManagerProtoHandler::ProcessWorker(const NodeManager::Worker& message, 
 
     int worker_instance_id = database_->InsertValuesUnique(
         "WorkerInstance",
-        {"Name", "WorkerID", "ComponentInstanceID", "Path"},
-        {message.info().name(), std::to_string(worker_id), std::to_string(component_id), worker_path},
+        {"Name", "WorkerID", "ComponentInstanceID", "Path", "GraphmlID"},
+        {message.info().name(), std::to_string(worker_id), std::to_string(component_id), worker_path, message.info().id()},
         {"Name", "ComponentInstanceID"}
     );
 }

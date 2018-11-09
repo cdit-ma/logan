@@ -7,6 +7,8 @@
 
 #include <pqxx/pqxx>
 
+#include <iostream>
+
 class DatabaseClient {
 public:
     DatabaseClient(const std::string& connection_details);
