@@ -11,13 +11,13 @@ class ExperimentTracker;
 
 class AggregationProtoHandler : public ProtoHandler {
 public:
-    AggregationProtoHandler(std::shared_ptr<DatabaseClient> db_client, std::shared_ptr<ExperimentTracker> exp_tracker);
+    AggregationProtoHandler(std::shared_ptr<DatabaseClient> db_client, ExperimentTracker& exp_tracker);
 
     virtual void BindCallbacks(zmq::ProtoReceiver& ProtoReceiver) = 0;
 
 protected:
     std::shared_ptr<DatabaseClient> database_;
-    std::shared_ptr<ExperimentTracker> experiment_tracker_;
+    ExperimentTracker& experiment_tracker_;
 
 };
 

@@ -60,9 +60,9 @@ int DatabaseClient::InsertValues(const std::string& table_name,
 
     query_stream << std::endl << " VALUES (";
     for (unsigned int i=0; i<values.size()-1; i++) {
-        query_stream << values.at(i) << ',';
+        query_stream << connection_.quote(values.at(i)) << ',';
     }
-    query_stream << values.at(values.size()-1) << ")" << std::endl;
+    query_stream << connection_.quote(values.at(values.size()-1)) << ")" << std::endl;
     query_stream << "RETURNING " << id_column << ";" << std::endl;
 
     std::lock_guard<std::mutex> conn_guard(conn_mutex_);
@@ -105,7 +105,7 @@ int DatabaseClient::InsertValuesUnique(const std::string& table_name,
     if (columns.size() > 0) {
         query_stream << " (";
         for (unsigned int i=0; i < columns.size()-1; i++) {
-            query_stream << connection_.quote_name(columns.at(i)) << ',';
+            query_stream << connection_.esc(columns.at(i)) << ',';
             for (unsigned int j=0; j<unique_cols.size(); j++) {
                 if (unique_cols.at(j) == columns.at(i)) {
                     unique_vals.at(j) = values.at(i);

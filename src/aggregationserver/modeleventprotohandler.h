@@ -7,7 +7,7 @@
 
 class ModelEventProtoHandler : public AggregationProtoHandler {
 public:
-    ModelEventProtoHandler(std::shared_ptr<DatabaseClient> db_client, std::shared_ptr<ExperimentTracker> exp_tracker)
+    ModelEventProtoHandler(std::shared_ptr<DatabaseClient> db_client, ExperimentTracker& exp_tracker)
         : AggregationProtoHandler(db_client, exp_tracker) {};
 
     void BindCallbacks(zmq::ProtoReceiver& ProtoReceiver);

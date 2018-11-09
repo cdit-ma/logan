@@ -26,7 +26,7 @@
 #include "aggregationserver.h"
 #include "nodemanagerprotohandler.h"
 #include "modeleventprotohandler.h"
-#include "systemstatusprotohandler.h"
+#include "systemeventprotohandler.h"
 #include "databaseclient.h"
 #include "experimenttracker.h"
 
@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
 
     const std::string connect_address("tcp://127.0.0.1:9000");
     auto writer = std::unique_ptr<zmq::ProtoWriter>(new zmq::ProtoWriter());
-    std::cerr << (writer->BindPublisherSocket(connect_address) ? "SUCCESS" : "FAILED") << std::endl;
+    std::cerr << (writer->BindPublisherSocket(connect_address) ? "SUCCESSFULLY CONNECTED TO SELF" : "FAILED TO CONNECT TO SELF") << std::endl;
     //Do me a sleep
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
@@ -86,6 +86,7 @@ int main(int argc, char** argv) {
         new AggregationServer(connect_address, database_ip, password, environment_manager_endpoint)
     );
     
+    std::cout << "Started AggregationServer without throwing any exceptions" << std::endl;
 
     
     // Read JSON into protobuf
@@ -128,28 +129,33 @@ AggregationServer::AggregationServer(const std::string& receiver_ip,
     
 
     database_client = std::make_shared<DatabaseClient>(conn_string_stream.str());
-    auto experiment_tracker = std::make_shared<ExperimentTracker>(database_client);
+    experiment_tracker = std::unique_ptr<ExperimentTracker>(new ExperimentTracker(database_client));
 
-    NodeManager::AggregationServerRegistrationRequest registration_request;
-    //registration_request->mutable_requestid()->set_ip_address(receiver_ip);
-    env_requester = std::unique_ptr<zmq::ProtoRequester>(new zmq::ProtoRequester(environment_endpoint));
-    auto reply = env_requester->SendRequest<NodeManager::AggregationServerRegistrationRequest, NodeManager::AggregationServerRegistrationReply>(
-        "AggregationServerRegistration", registration_request, 3000
-    );
-    std::string publisher_endpoint = reply.get()->publisher_endpoint();
+    nodemanager_protohandler = std::unique_ptr<AggregationProtoHandler>(new NodeManagerProtoHandler(database_client, *experiment_tracker));
+    modelevent_protohandler = std::unique_ptr<AggregationProtoHandler>(new ModelEventProtoHandler(database_client, *experiment_tracker));
+    systemevent_protohandler = std::unique_ptr<AggregationProtoHandler>(new SystemEventProtoHandler(database_client, *experiment_tracker));
+    
+    try {
+        NodeManager::AggregationServerRegistrationRequest registration_request;
+        env_requester = std::unique_ptr<zmq::ProtoRequester>(new zmq::ProtoRequester(environment_endpoint));
+        auto reply = env_requester->SendRequest<NodeManager::AggregationServerRegistrationRequest, NodeManager::AggregationServerRegistrationReply>(
+            "AggregationServerRegistration", registration_request, 3000
+        );
+        std::string publisher_endpoint = reply.get()->publisher_endpoint();
 
 
-    nodemanager_protohandler = std::unique_ptr<AggregationProtoHandler>(new NodeManagerProtoHandler(database_client, experiment_tracker));
-    modelevent_protohandler = std::unique_ptr<AggregationProtoHandler>(new ModelEventProtoHandler(database_client, experiment_tracker));
-    systemstatus_protohandler = std::unique_ptr<AggregationProtoHandler>(new SystemStatusProtoHandler(database_client, experiment_tracker));
-    nodemanager_protohandler->BindCallbacks(receiver);
-    modelevent_protohandler->BindCallbacks(receiver);
-    systemstatus_protohandler->BindCallbacks(receiver);
+        nodemanager_protohandler->BindCallbacks(receiver);
+        modelevent_protohandler->BindCallbacks(receiver);
+        systemevent_protohandler->BindCallbacks(receiver);
 
-    //receiver.Connect(receiver_ip);
-    receiver.Connect(publisher_endpoint);
-    receiver.Filter("");
-    receiver.Start();
+        //receiver.Connect(receiver_ip);
+        receiver.Connect(publisher_endpoint);
+        receiver.Filter("");
+        receiver.Start();
+    } catch (const std::exception& e) {
+        throw std::runtime_error(std::string("Failed to start protoreceiver: ")+e.what());
+    }
+    //throw std::runtime_error("test exception");
 }
 
 void AggregationServer::AddLifecycleEventsFromNode(std::vector<ModelEvent::LifecycleEvent>& events,

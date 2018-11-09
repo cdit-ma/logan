@@ -1,13 +1,13 @@
-#ifndef SystemStatusProtoHandler_H
-#define SystemStatusProtoHandler_H
+#ifndef SYSTEMEVENTPROTOHANDLER_H
+#define SYSTEMEVENTPROTOHANDLER_H
 
 #include "aggregationprotohandler.h"
 
 #include <proto/systemevent/systemevent.pb.h>
 
-class SystemStatusProtoHandler : public AggregationProtoHandler {
+class SystemEventProtoHandler : public AggregationProtoHandler {
 public:
-    SystemStatusProtoHandler(std::shared_ptr<DatabaseClient> db_client, std::shared_ptr<ExperimentTracker> exp_tracker) 
+    SystemEventProtoHandler(std::shared_ptr<DatabaseClient> db_client, ExperimentTracker& exp_tracker) 
         : AggregationProtoHandler(db_client, exp_tracker) {};
 
     void BindCallbacks(zmq::ProtoReceiver& ProtoReceiver);
@@ -19,4 +19,4 @@ private:
 };
 
 
-#endif
+#endif //SYSTEMEVENTPROTOHANDLER_H

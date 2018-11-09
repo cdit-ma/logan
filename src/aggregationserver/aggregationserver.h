@@ -6,10 +6,12 @@
 #include <util/execution.hpp>
 
 #include <zmq/protorequester/protorequester.hpp>
+#include "experimenttracker.h"
 
 class DatabaseClient;
 
 class AggregationProtoHandler;
+
 
 namespace ModelEvent {
     class LifecycleEvent;
@@ -59,10 +61,11 @@ private:
     std::shared_ptr<DatabaseClient> database_client;
 
     std::unique_ptr<zmq::ProtoRequester> env_requester;
+    std::unique_ptr<ExperimentTracker>  experiment_tracker;
 
     std::unique_ptr<AggregationProtoHandler> nodemanager_protohandler;
     std::unique_ptr<AggregationProtoHandler> modelevent_protohandler;
-    std::unique_ptr<AggregationProtoHandler> systemstatus_protohandler;
+    std::unique_ptr<AggregationProtoHandler> systemevent_protohandler;
 };
 
 #endif 
