@@ -313,12 +313,13 @@ CREATE TABLE ComponentInstance
  ComponentInstanceID SERIAL ,
  Path                TEXT NOT NULL ,
  Name                TEXT NOT NULL ,
- NodeID              INT NOT NULL ,
+ GraphmlID           TEXT NOT NULL,
+ ContainerID         INT NOT NULL ,
  ComponentID         INT NOT NULL ,
 
 PRIMARY KEY (ComponentInstanceID),
 CONSTRAINT UniquePathPerRun UNIQUE (ComponentID, Path),
-CONSTRAINT FK_394 FOREIGN KEY (NodeID) REFERENCES Node (NodeID),
+CONSTRAINT FK_394 FOREIGN KEY (ContainerID) REFERENCES Container (ContainerID),
 CONSTRAINT FK_407 FOREIGN KEY (ComponentID) REFERENCES Component (ComponentID)
 );
 
@@ -474,6 +475,7 @@ CREATE TABLE WorkerInstance
  WorkerInstanceID    SERIAL ,
  Path                TEXT NOT NULL ,
  Name                TEXT NOT NULL ,
+ GraphmlID           TEXT NOT NULL,
  ComponentInstanceID INT NOT NULL ,
  WorkerID            INT NOT NULL ,
 
@@ -495,6 +497,7 @@ CREATE TABLE Port
  PortID              SERIAL ,
  Name                TEXT NOT NULL ,
  Path                TEXT NOT NULL ,
+ GraphmlID           TEXT NOT NULL,
  ComponentInstanceID INT NOT NULL ,
  Kind                TEXT NOT NULL ,
  Type                TEXT ,
