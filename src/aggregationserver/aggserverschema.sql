@@ -537,9 +537,11 @@ CREATE TABLE WorkloadEvent
 (
  WorkloadEventID  SERIAL ,
  WorkerInstanceID INT NOT NULL ,
+ WorkloadID     INT NOT NULL ,
  Function         TEXT NOT NULL ,
  Type             TEXT NOT NULL ,
  Arguments        TEXT NOT NULL ,
+ LogLevel         INT NOT NULL ,
  SampleTime       TIMESTAMP NOT NULL ,
 
 PRIMARY KEY (WorkloadEventID),
