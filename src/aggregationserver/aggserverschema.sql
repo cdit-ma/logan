@@ -561,6 +561,7 @@ CREATE TABLE PortEvent
  PortID               INT NOT NULL ,
  PortEventSequenceNum INT NOT NULL ,
  Type                 TEXT NOT NULL ,
+ Message              TEXT ,
  SampleTime           TIMESTAMP NOT NULL ,
 
 PRIMARY KEY (PortEventID),

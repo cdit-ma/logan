@@ -76,13 +76,14 @@ void ModelEventProtoHandler::ProcessUtilizationEvent(const ModelEvent::Utilizati
     std::string port_id = std::to_string(GetPortID(message.port(), message.component(), message.info().experiment_name()));
     std::string seq_num = std::to_string(message.port_event_id());
     std::string type = ModelEvent::UtilizationEvent::Type_Name(message.type());
+    std::string msg = message.message();
     //std::string sample_time = AggServer::FormatTimestamp(message.info().timestamp());
     std::string sample_time = TimeUtil::ToString(message.info().timestamp());
 
     database_->InsertValues(
         "PortEvent",
-        {"PortID", "PortEventSequenceNum", "Type", "SampleTime"},
-        {port_id, seq_num, type, sample_time}
+        {"PortID", "PortEventSequenceNum", "Type", "Message", "SampleTime"},
+        {port_id, seq_num, type, msg, sample_time}
     );
 }
 
