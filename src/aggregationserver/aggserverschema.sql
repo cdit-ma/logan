@@ -537,9 +537,11 @@ CREATE TABLE WorkloadEvent
 (
  WorkloadEventID  SERIAL ,
  WorkerInstanceID INT NOT NULL ,
+ WorkloadID     INT NOT NULL ,
  Function         TEXT NOT NULL ,
  Type             TEXT NOT NULL ,
  Arguments        TEXT NOT NULL ,
+ LogLevel         INT NOT NULL ,
  SampleTime       TIMESTAMP NOT NULL ,
 
 PRIMARY KEY (WorkloadEventID),
@@ -559,6 +561,7 @@ CREATE TABLE PortEvent
  PortID               INT NOT NULL ,
  PortEventSequenceNum INT NOT NULL ,
  Type                 TEXT NOT NULL ,
+ Message              TEXT ,
  SampleTime           TIMESTAMP NOT NULL ,
 
 PRIMARY KEY (PortEventID),
