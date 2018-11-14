@@ -6,7 +6,10 @@
 
 namespace AggServer {
     // String builder functions
-    std::string GetFullLocation(const std::vector<std::string>& locations, const std::vector<int>& replication_indices);
+    std::string GetFullLocation(
+        const std::vector<std::string>& locations,
+        const std::vector<int>& replication_indices,
+        const std::string& component_name);
     std::string FormatTimestamp(double timestamp);
 }
 

@@ -133,7 +133,7 @@ void NodeManagerProtoHandler::ProcessComponent(const NodeManager::Component& mes
     std::string full_location;
     auto&& location_vec = std::vector<std::string>(message.location().begin(), message.location().end());
     auto&& replication_vec = std::vector<int>(message.replicate_indices().begin(), message.replicate_indices().end());
-    full_location = AggServer::GetFullLocation(location_vec, replication_vec);
+    full_location = AggServer::GetFullLocation(location_vec, replication_vec, message.info().name());
 
     int component_instance_id = database_->InsertValuesUnique(
         "ComponentInstance",

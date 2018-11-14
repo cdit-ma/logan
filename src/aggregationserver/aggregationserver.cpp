@@ -225,7 +225,7 @@ ModelEvent::LifecycleEvent AggregationServer::GenerateLifecycleEventFromPort(/*s
 void AggregationServer::FillModelEventComponent(ModelEvent::Component* component, const NodeManager::Component& nm_component) {
     auto&& location_vec = std::vector<std::string>(nm_component.location().begin(), nm_component.location().end());
     auto&& replication_vec = std::vector<int>(nm_component.replicate_indices().begin(), nm_component.replicate_indices().end());
-    std::string full_location = AggServer::GetFullLocation(location_vec, replication_vec);
+    std::string full_location = AggServer::GetFullLocation(location_vec, replication_vec, nm_component.info().name());
     
     //component->set_id(nm_component.info().id());
     component->set_id(full_location);   // Needs to be updated to store path more appropriately in ModelEvents

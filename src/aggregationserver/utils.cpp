@@ -8,7 +8,11 @@
 
 #include <google/protobuf/util/time_util.h>
 
-std::string AggServer::GetFullLocation(const std::vector<std::string>& locations, const std::vector<int>& replication_indices) {
+std::string AggServer::GetFullLocation(
+    const std::vector<std::string>& locations,
+    const std::vector<int>& replication_indices,
+    const std::string& component_name)
+{
     std::string full_location;
 
     auto loc_iter = locations.begin();
@@ -20,7 +24,7 @@ std::string AggServer::GetFullLocation(const std::vector<std::string>& locations
         rep_iter++;
     }
 
-    return full_location;
+    return full_location.append(component_name);
 }
 
 std::string AggServer::FormatTimestamp(double timestamp) {
