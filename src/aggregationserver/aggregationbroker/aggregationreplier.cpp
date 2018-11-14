@@ -7,11 +7,17 @@ using google::protobuf::util::TimeUtil;
 AggServer::AggregationReplier::AggregationReplier(std::shared_ptr<DatabaseClient> database) :
     database_(database)
 {
+    // const auto&& res = database_->GetPortLifecycleEventInfo(
+    //     "1970-01-01T00:00:00.000000Z",
+    //     "1970-01-01T9:10:23.924073Z",
+    //     {"Port.Path"},
+    //     {"top_level_assembly.1/tx_assembly.1//tx_port"}
+    // );
     const auto&& res = database_->GetPortLifecycleEventInfo(
         "1970-01-01T00:00:00.000000Z",
         "1970-01-01T9:10:23.924073Z",
         {"Port.Path"},
-        {"top_level_assembly.1/tx_assembly.1//tx_port"}
+        {"ComponentAssembly.0//SubscriberPort"}
     );
     std::cout << "num affected rows" << res.size() << std::endl;
 }
@@ -79,20 +85,32 @@ AggServer::AggregationReplier::ProcessPortLifecycleRequest(const AggServer::Port
             bool did_parse_lifecycle = AggServer::Port::Kind_Parse(row["PortKind"].as<std::string>(), &kind);
             port->set_kind(kind);
             port->set_middleware(row["Middleware"].as<std::string>());
+            port->set_graphml_id(row["PortGraphmlID"].as<std::string>());
 
             // Build ComponentInstance
             auto component_inst = port->mutable_component_instance();
             component_inst->set_name(row["ComponentInstanceName"].as<std::string>());
             component_inst->set_path(row["ComponentInstancePath"].as<std::string>());
+            component_inst->set_graphml_id(row["ComponentInstanceGraphmlID"].as<std::string>());
 
             // Build Component
             auto component = component_inst->mutable_component();
             component->set_name(row["ComponentName"].as<std::string>());
+            component->set_graphml_id(row["ComponentGraphmlID"].as<std::string>());
 
+            // Build Container
+            auto container = component_inst->mutable_container();
+            container->set_name(row["ContainerName"].as<std::string>());
+            container->set_graphml_id(row["ContainerGraphmlID"].as<std::string>());
+            //auto&& container_type_int = 
+            container->set_type((AggServer::Container::ContainerType)row["ContainerType"].as<int>());
+            container->set_graphml_id(row["ContainerGraphmlID"].as<std::string>());
+            
             // Build Node
-            auto node = component_inst->mutable_node();
+            auto node = container->mutable_node();
             node->set_hostname(row["NodeHostname"].as<std::string>());
             node->set_ip(row["NodeIP"].as<std::string>());
+            node->set_graphml_id(row["NodeGraphmlID"].as<std::string>());
         }
 
     } catch (const std::exception& ex) {
