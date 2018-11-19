@@ -37,9 +37,6 @@ DROP TABLE Hardware.InterfaceStatus;
 DROP TABLE Hardware.FilesystemStatus;
 
 
-DROP TABLE Container;
-
-
 DROP TABLE Hardware.System;
 
 
@@ -53,6 +50,9 @@ DROP TABLE Hardware.Interface;
 
 
 DROP TABLE Hardware.Filesystem;
+
+
+DROP TABLE Container;
 
 
 DROP TABLE Worker;
@@ -70,6 +70,10 @@ DROP TABLE ExperimentRun;
 DROP TABLE Experiment;
 
 
+DROP SCHEMA Hardware;
+
+
+CREATE SCHEMA Hardware;
 
 -- ************************************** Experiment
 
@@ -175,7 +179,7 @@ CONSTRAINT FK_360 FOREIGN KEY (ExperimentRunID) REFERENCES ExperimentRun (Experi
 CREATE TABLE Container
 (
  ContainerID       SERIAL ,
- NodeID          INT NOT NULL,
+ NodeID          INT NOT NULL ,
  Name            TEXT NOT NULL ,
  GraphmlID       TEXT NOT NULL,
  Type            TEXT NOT NULL,
