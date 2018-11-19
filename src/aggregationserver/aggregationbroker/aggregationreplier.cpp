@@ -83,34 +83,13 @@ AggServer::AggregationReplier::ProcessPortLifecycleRequest(const AggServer::Port
             port->set_path(row["PortPath"].as<std::string>());
             Port::Kind kind;
             bool did_parse_lifecycle = AggServer::Port::Kind_Parse(row["PortKind"].as<std::string>(), &kind);
+            if (!did_parse_lifecycle) {
+                throw std::runtime_error("Failed to parse Lifecycle Kind field from string: "+row["PortKind"].as<std::string>());
+            }
             port->set_kind(kind);
             port->set_middleware(row["Middleware"].as<std::string>());
             port->set_graphml_id(row["PortGraphmlID"].as<std::string>());
 
-            // Build ComponentInstance
-            auto component_inst = port->mutable_component_instance();
-            component_inst->set_name(row["ComponentInstanceName"].as<std::string>());
-            component_inst->set_path(row["ComponentInstancePath"].as<std::string>());
-            component_inst->set_graphml_id(row["ComponentInstanceGraphmlID"].as<std::string>());
-
-            // Build Component
-            auto component = component_inst->mutable_component();
-            component->set_name(row["ComponentName"].as<std::string>());
-            component->set_graphml_id(row["ComponentGraphmlID"].as<std::string>());
-
-            // Build Container
-            auto container = component_inst->mutable_container();
-            container->set_name(row["ContainerName"].as<std::string>());
-            container->set_graphml_id(row["ContainerGraphmlID"].as<std::string>());
-            //auto&& container_type_int = 
-            container->set_type((AggServer::Container::ContainerType)row["ContainerType"].as<int>());
-            container->set_graphml_id(row["ContainerGraphmlID"].as<std::string>());
-            
-            // Build Node
-            auto node = container->mutable_node();
-            node->set_hostname(row["NodeHostname"].as<std::string>());
-            node->set_ip(row["NodeIP"].as<std::string>());
-            node->set_graphml_id(row["NodeGraphmlID"].as<std::string>());
         }
 
     } catch (const std::exception& ex) {

@@ -254,7 +254,7 @@ const pqxx::result DatabaseClient::GetPortLifecycleEventInfo(
     query_stream << "   Port.Name AS PortName, Port.Type AS PortType, Port.Kind AS PortKind, Port.Path AS PortPath, Port.Middleware, Port.GraphmlID AS PortGraphmlID, \n";
     query_stream << "   ComponentInstance.Name AS ComponentInstanceName, ComponentInstance.Path AS ComponentInstancePath, ComponentInstance.GraphmlID AS ComponentInstanceGraphmlID,\n";
     query_stream << "   Component.Name AS ComponentName, Component.GraphmlID AS ComponentGraphmlID,\n";
-    query_stream << "   Container.Name AS ComntainerName, Container.Type as ContainerType, Container.GraphmlID AS ContainerGraphmlID,\n";
+    query_stream << "   Container.Name AS ContainerName, Container.Type as ContainerType, Container.GraphmlID AS ContainerGraphmlID,\n";
     query_stream << "   Node.Hostname AS NodeHostname, Node.IP AS NodeIP, Node.GraphmlID AS NodeGraphmlID\n";
     query_stream << "FROM PortLifecycleEvent INNER JOIN Port ON PortLifecycleEvent.PortID = Port.PortID\n";
     query_stream << "   INNER JOIN ComponentInstance ON Port.ComponentInstanceID = ComponentInstance.ComponentInstanceID\n";
