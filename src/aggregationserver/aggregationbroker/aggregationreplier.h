@@ -16,11 +16,17 @@ public:
     std::unique_ptr<AggServer::PortLifecycleResponse>
     ProcessPortLifecycleRequest(
         const AggServer::PortLifecycleRequest& message
-        );
+    );
+
+    std::unique_ptr<AggServer::WorkloadResponse>
+    ProcessWorkloadEventRequest(
+        const AggServer::WorkloadRequest& message
+    );
 
 private:
     std::shared_ptr<DatabaseClient> database_;
-    
+
+    void RegisterCallbacks();
 };
 
 }

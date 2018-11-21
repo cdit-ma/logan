@@ -278,7 +278,55 @@ const pqxx::result DatabaseClient::GetPortLifecycleEventInfo(
     std::lock_guard<std::mutex> conn_guard(conn_mutex_);
 
     try {
-        pqxx::work transaction(connection_, "GetValuesTransaction");
+        pqxx::work transaction(connection_, "GetPortLifecycleEventTransaction");
+        const auto& pg_result = transaction.exec(query_stream.str());
+        transaction.commit();
+
+        return pg_result;
+    } catch (const std::exception& e)  {
+        std::cerr << e.what() << std::endl;
+        throw;
+    }
+}
+
+const pqxx::result DatabaseClient::GetWorkloadEventInfo(
+        std::string start_time,
+        std::string end_time,
+        const std::vector<std::string>& condition_columns,
+        const std::vector<std::string>& condition_values
+) {
+    std::stringstream query_stream;
+
+    query_stream << "SELECT WorkloadEvent.Type, to_char((sampletime::timestamp), 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS SampleTime, WorkloadEvent.Function AS FunctionName, WorkloadEvent.Arguments AS Arguments,\n";
+    query_stream << "   WorkerInstance.Name AS WorkerInstanceName, WorkerInstance.Path AS WorkerInstancePath, WorkerInstance.GraphmlID AS WorkerInstanceGraphmlID, \n";
+    query_stream << "   Worker.Name AS WorkerName, Worker.GraphmlID AS WorkerGraphmlID, \n";
+    query_stream << "   ComponentInstance.Name AS ComponentInstanceName, ComponentInstance.Path AS ComponentInstancePath, ComponentInstance.GraphmlID AS ComponentInstanceGraphmlID,\n";
+    query_stream << "   Component.Name AS ComponentName, Component.GraphmlID AS ComponentGraphmlID,\n";
+    query_stream << "   Container.Name AS ContainerName, Container.Type as ContainerType, Container.GraphmlID AS ContainerGraphmlID,\n";
+    query_stream << "   Node.Hostname AS NodeHostname, Node.IP AS NodeIP, Node.GraphmlID AS NodeGraphmlID\n";
+    query_stream << "FROM WorkloadEvent INNER JOIN WorkerInstance ON WorkloadEvent.WorkerInstanceID = WorkerInstance.WorkerInstanceID\n";
+    query_stream << "   INNER JOIN Worker ON WorkerInstance.WorkerID = Worker.WorkerID\n";
+    query_stream << "   INNER JOIN ComponentInstance ON WorkerInstance.ComponentInstanceID = ComponentInstance.ComponentInstanceID\n";
+    query_stream << "   INNER JOIN Component ON ComponentInstance.ComponentID = Component.ComponentID\n";
+    query_stream << "   INNER JOIN Container ON ComponentInstance.ContainerID = Container.ContainerID\n";
+    query_stream << "   INNER JOIN Node ON Container.NodeID = Node.NodeID\n";
+
+    if (condition_columns.size() != 0) {
+        query_stream << BuildWhereClause(condition_columns, condition_values) << " AND ";
+    } else {
+        query_stream << "WHERE ";
+    }
+    query_stream << "WorkloadEvent.SampleTime >= '" << /*connection_.quote(*/start_time/*)*/ << "'";
+
+    if (end_time != AggServer::FormatTimestamp(0.0)) {
+        query_stream << "AND WorkloadEvent.SampleTime <= '" << /*connection_.quote(*/end_time/*)*/ << "'";
+    }
+    query_stream << std::endl;
+
+    std::lock_guard<std::mutex> conn_guard(conn_mutex_);
+
+    try {
+        pqxx::work transaction(connection_, "GetWorkloadEventsTransaction");
         const auto& pg_result = transaction.exec(query_stream.str());
         transaction.commit();
 

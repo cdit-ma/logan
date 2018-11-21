@@ -133,5 +133,4 @@ ExperimentInfo& ExperimentTracker::GetExperimentInfo(const std::string& experime
 void ExperimentTracker::StartExperimentLoggerReceivers(int experiment_id){
     auto& e = GetExperimentInfo(experiment_id);
     e.receiver->Filter("");
-    e.receiver->Start();
 }

@@ -13,11 +13,6 @@ AggServer::AggregationBroker::AggregationBroker(const std::string& replier_ip,
         new AggServer::AggregationReplier(std::make_shared<DatabaseClient>(conn_string_stream.str()))
     );
 
-    replier->RegisterProtoCallback<AggServer::PortLifecycleRequest, AggServer::PortLifecycleResponse>(
-        "GetPortLifecycle",
-        std::bind(&AggregationReplier::ProcessPortLifecycleRequest, replier.get(), std::placeholders::_1)
-        );
-
     replier->Bind(replier_ip);
     replier->Start();
 }
