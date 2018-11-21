@@ -172,7 +172,7 @@ void NodeManagerProtoHandler::ProcessWorker(const NodeManager::Worker& message, 
     int worker_id = database_->InsertValuesUnique(
         "Worker",
         {"Name", "ExperimentRunID", "GraphmlID"},
-        {message.info().type(), std::to_string(experiment_run_id), message.info().type()},
+        {message.info().type(), std::to_string(experiment_run_id), message.info().id()},
         {"Name"}
     );
 

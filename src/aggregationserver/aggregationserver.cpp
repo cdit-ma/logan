@@ -151,7 +151,6 @@ AggregationServer::AggregationServer(const std::string& receiver_ip,
         //receiver.Connect(receiver_ip);
         receiver.Connect(publisher_endpoint);
         receiver.Filter("");
-        receiver.Start();
     } catch (const std::exception& e) {
         throw std::runtime_error(std::string("Failed to start protoreceiver: ")+e.what());
     }

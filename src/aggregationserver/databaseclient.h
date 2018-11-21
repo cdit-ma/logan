@@ -53,6 +53,13 @@ public:
         const std::vector<std::string>& condition_values
     );
 
+    const pqxx::result GetWorkloadEventInfo(
+        std::string start_time,
+        std::string end_time,
+        const std::vector<std::string>& condition_columns,
+        const std::vector<std::string>& condition_values
+    );
+
 private:
     const std::string BuildWhereClause(
         const std::vector<std::string>& cols,
