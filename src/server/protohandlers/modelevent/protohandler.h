@@ -25,6 +25,7 @@
 #include <memory>
 #include <set>
 
+#include <mutex>
 #include <zmq/protoreceiver/protoreceiver.h>
 #include <proto/modelevent/modelevent.pb.h>
 
@@ -37,11 +38,11 @@ namespace ModelEvent{
     class ProtoHandler : public ::ProtoHandler{
     public:
         ProtoHandler(SQLiteDatabase& database);
+        ~ProtoHandler();
         void BindCallbacks(zmq::ProtoReceiver& receiver);
     private:
         Table& GetTable(const std::string& table_name);
         bool GotTable(const std::string& table_name);
-        void QueueTableStatement(TableInsert& insert);
 
         //Table creation
         void CreateLifecycleTable();
@@ -65,6 +66,8 @@ namespace ModelEvent{
         static void BindWorkerColumns(TableInsert& row, const ModelEvent::Worker& worker);
         static void BindPortColumns(TableInsert& row, const ModelEvent::Port& port);
 
+        std::mutex mutex_;
+        uint64_t rx_count_ = 0;
         SQLiteDatabase& database_;
         std::unordered_map<std::string, std::unique_ptr<Table> > tables_;
     };

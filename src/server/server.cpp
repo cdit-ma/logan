@@ -18,13 +18,7 @@ Server::Server(const std::string& database_path, const std::vector<std::string>&
     proto_receiver_ = std::unique_ptr<zmq::ProtoReceiver>(new zmq::ProtoReceiver());
     database_ = std::unique_ptr<SQLiteDatabase>(new SQLiteDatabase(database_path));
 
-    //Connect to all addresses
-    for(const auto& address : addresses){
-        proto_receiver_->Connect(address);
-    }
-
-    //Recieve all messages
-    proto_receiver_->Filter("");
+    
 
     //Add our proto handlers and start the server
     #ifndef DISABLE_HARDWARE_HANDLER
@@ -34,7 +28,19 @@ Server::Server(const std::string& database_path, const std::vector<std::string>&
     #ifndef DISABLE_MODEL_HANDLER
     AddProtoHandler(std::unique_ptr<ProtoHandler>(new ModelEvent::ProtoHandler(*database_)));
     #endif
+
+    //Recieve all messages
+    proto_receiver_->Filter("");
+
+    //Connect to all addresses
+    for(const auto& address : addresses){
+        proto_receiver_->Connect(address);
+    }
+
+    auto statement_size = database_->Flush();
+    std::cout << "* Constructed " << statement_size << " tables" << std::endl;
 }
+
 
 SQLiteDatabase& Server::GetDatabase(){
     return *database_;
@@ -46,22 +52,7 @@ void Server::AddProtoHandler(std::unique_ptr<ProtoHandler> proto_handler){
     proto_handlers_.emplace_back(std::move(proto_handler));
 }
 
-void Server::Start(){
-    std::lock_guard<std::mutex> lock(mutex_);
-    
-    if(!running_){
-        database_->Flush(true);
-        std::cout << "* Constructed tables" << std::endl;
-        proto_receiver_->Start();
-        running_ = true;
-    }
-}
-
 Server::~Server(){
-    if(proto_receiver_){
-        std::cout << "* Logged " << proto_receiver_->GetRxCount() << " messages." << std::endl;
-    }
-
     //Shutdown the receiver
     proto_receiver_.reset();
 
