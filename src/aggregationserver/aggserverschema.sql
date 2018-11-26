@@ -199,7 +199,6 @@ CONSTRAINT FK_356 FOREIGN KEY (NodeID) REFERENCES Node (NodeID)
 CREATE TABLE Hardware.System
 (
  SystemID     SERIAL ,
- SequenceNumber INT NOT NULL ,
  SampleTime     TIMESTAMP NOT NULL ,
  OSName         TEXT NOT NULL ,
  OSArch         TEXT NOT NULL ,
@@ -209,8 +208,8 @@ CREATE TABLE Hardware.System
  OSVendorName   TEXT NOT NULL ,
  CPUModel       TEXT NOT NULL ,
  CPUVendor      TEXT NOT NULL ,
- CPUFrequency   INT NOT NULL ,
- PhysicalMemory INT NOT NULL ,
+ CPUFrequencyHz   INT NOT NULL ,
+ PhysicalMemoryKB INT NOT NULL ,
  NodeID      INT NOT NULL ,
 
 PRIMARY KEY (SystemID),
@@ -247,12 +246,11 @@ CONSTRAINT FK_385 FOREIGN KEY (NodeID) REFERENCES Node (NodeID)
 CREATE TABLE Hardware.Process
 (
  ProcessID    SERIAL ,
- SequenceNumber INT NOT NULL ,
  pID            SMALLINT NOT NULL ,
- ExecutablePath TEXT NOT NULL ,
+ WorkingDirectory TEXT NOT NULL ,
+ ProcessName    TEXT NOT NULL ,
  Args           TEXT NOT NULL ,
  StartTime      TIMESTAMP NOT NULL ,
- SampleTime     TIMESTAMP NOT NULL ,
  NodeID      INT NOT NULL ,
 
 PRIMARY KEY (ProcessID),
@@ -269,8 +267,6 @@ CONSTRAINT FK_390 FOREIGN KEY (NodeID) REFERENCES Node (NodeID)
 CREATE TABLE Hardware.Interface
 (
  InterfaceID SERIAL ,
- Sequence      INT NOT NULL ,
- SampleTime    TIMESTAMP NOT NULL ,
  Name          TEXT NOT NULL ,
  Type          TEXT NOT NULL ,
  Description   TEXT NOT NULL ,
@@ -338,7 +334,6 @@ CREATE TABLE Hardware.SystemStatus
 (
  SystemStatusID   SERIAL ,
  SystemID         INT NOT NULL ,
- SequenceNumber     INT NOT NULL ,
  SampleTime         TIMESTAMP NOT NULL ,
  CPUUtilisation     DECIMAL NOT NULL ,
  PhysMemUtilisation DECIMAL NOT NULL ,
@@ -358,7 +353,6 @@ CREATE TABLE Hardware.ProcessStatus
 (
  ProcessID        INT NOT NULL ,
  ProcessStatusID  SERIAL ,
- SequenceNumber     INT NOT NULL ,
  CoreID             INT NOT NULL ,
  CPUutilisation     DECIMAL NOT NULL ,
  PhysMemUtilisation DECIMAL NOT NULL ,
@@ -367,6 +361,7 @@ CREATE TABLE Hardware.ProcessStatus
  DiskWritten        INTEGER NOT NULL ,
  DiskTotal          INTEGER NOT NULL ,
  State              TEXT NOT NULL ,
+ SampleTime         TIMESTAMP NOT NULL ,
 
 PRIMARY KEY (ProcessStatusID),
 CONSTRAINT FK_131 FOREIGN KEY (ProcessID) REFERENCES Hardware.Process (ProcessID)
@@ -387,7 +382,6 @@ CREATE TABLE Hardware.InterfaceStatus
  BytesReceived       INT NOT NULL ,
  PacketsTransmitted  INT NOT NULL ,
  BytesTransmitted    INT NOT NULL ,
- SequenceNumber      INT NOT NULL ,
  SampleTime          TIMESTAMP NOT NULL ,
 
 PRIMARY KEY (InterfaceStatusID),
@@ -404,7 +398,6 @@ CONSTRAINT FK_104 FOREIGN KEY (InterfaceID) REFERENCES Hardware.Interface (Inter
 CREATE TABLE Hardware.FilesystemStatus
 (
  FilesytemStatusID SERIAL ,
- SequenceNumber      INT NOT NULL ,
  SampleTime          TIMESTAMP NOT NULL ,
  Utilisation         DECIMAL NOT NULL ,
  FilesystemID      INT NOT NULL ,
