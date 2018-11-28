@@ -199,7 +199,6 @@ CONSTRAINT FK_356 FOREIGN KEY (NodeID) REFERENCES Node (NodeID)
 CREATE TABLE Hardware.System
 (
  SystemID     SERIAL ,
- SampleTime     TIMESTAMP NOT NULL ,
  OSName         TEXT NOT NULL ,
  OSArch         TEXT NOT NULL ,
  OSDescription  TEXT NOT NULL ,
@@ -213,6 +212,7 @@ CREATE TABLE Hardware.System
  NodeID      INT NOT NULL ,
 
 PRIMARY KEY (SystemID),
+CONSTRAINT UniqueSystemPerNode UNIQUE (NodeID),
 CONSTRAINT FK_373 FOREIGN KEY (NodeID) REFERENCES Node (NodeID)
 );
 
@@ -226,7 +226,6 @@ CONSTRAINT FK_373 FOREIGN KEY (NodeID) REFERENCES Node (NodeID)
 CREATE TABLE Hardware.CPUStatus
 (
  CPUStatusID   SERIAL ,
- SequenceNumber  INT NOT NULL ,
  SampleTime      TIMESTAMP NOT NULL ,
  CoreID          INT NOT NULL ,
  CoreUtilisation DECIMAL NOT NULL ,
@@ -273,10 +272,11 @@ CREATE TABLE Hardware.Interface
  IPv4          INET NOT NULL ,
  IPv6          INET NOT NULL ,
  MAC           MACADDR NOT NULL ,
- Speed         INT NOT NULL ,
+ Speed         BIGINT NOT NULL ,
  NodeID     INT NOT NULL ,
 
 PRIMARY KEY (InterfaceID),
+CONSTRAINT UniqueInterfacePerNode UNIQUE (NodeID, Name),
 CONSTRAINT FK_381 FOREIGN KEY (NodeID) REFERENCES Node (NodeID)
 );
 
@@ -290,14 +290,13 @@ CONSTRAINT FK_381 FOREIGN KEY (NodeID) REFERENCES Node (NodeID)
 CREATE TABLE Hardware.Filesystem
 (
  FilesystemID SERIAL ,
- SampleTime     TIMESTAMP NOT NULL ,
  Name           TEXT NOT NULL ,
  Type           TEXT NOT NULL ,
  Size           INT NOT NULL ,
- SequenceNumber INT NOT NULL ,
  NodeID      INT NOT NULL ,
 
 PRIMARY KEY (FilesystemID),
+CONSTRAINT UniqueFilesystemPerNode UNIQUE (NodeID, Name),
 CONSTRAINT FK_377 FOREIGN KEY (NodeID) REFERENCES Node (NodeID)
 );
 

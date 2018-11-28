@@ -27,6 +27,8 @@ struct ExperimentInfo {
     std::unique_ptr<zmq::ProtoReceiver> receiver;
     std::unique_ptr<SystemEventProtoHandler> system_handler;
     std::unique_ptr<ModelEventProtoHandler> model_handler;
+
+    std::map<std::string, int> hostname_node_id_cache;
 };
 
 class ExperimentTracker {
@@ -40,6 +42,9 @@ public:
     int GetCurrentRunJobNum(const std::string& experiment_name);
     int GetCurrentRunID(const std::string& experiment_name);
     int GetCurrentRunID(int experiment_id);
+
+    void AddNodeIDWithHostname(int experiment_id, const std::string& hostname, int node_id);
+    int GetNodeIDFromHostname(int experiment_id, const std::string& hostname);
 
     void StartExperimentLoggerReceivers(int experiment_id);
 private:

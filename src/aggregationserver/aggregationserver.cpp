@@ -132,9 +132,7 @@ AggregationServer::AggregationServer(const std::string& receiver_ip,
     experiment_tracker = std::unique_ptr<ExperimentTracker>(new ExperimentTracker(database_client));
 
     nodemanager_protohandler = std::unique_ptr<AggregationProtoHandler>(new NodeManagerProtoHandler(database_client, *experiment_tracker));
-    modelevent_protohandler = std::unique_ptr<AggregationProtoHandler>(new ModelEventProtoHandler(database_client, *experiment_tracker));
-    systemevent_protohandler = std::unique_ptr<AggregationProtoHandler>(new SystemEventProtoHandler(database_client, *experiment_tracker));
-    
+   
     try {
         NodeManager::AggregationServerRegistrationRequest registration_request;
         env_requester = std::unique_ptr<zmq::ProtoRequester>(new zmq::ProtoRequester(environment_endpoint));
@@ -145,10 +143,7 @@ AggregationServer::AggregationServer(const std::string& receiver_ip,
 
 
         nodemanager_protohandler->BindCallbacks(receiver);
-        modelevent_protohandler->BindCallbacks(receiver);
-        systemevent_protohandler->BindCallbacks(receiver);
 
-        //receiver.Connect(receiver_ip);
         receiver.Connect(publisher_endpoint);
         receiver.Filter("");
     } catch (const std::exception& e) {

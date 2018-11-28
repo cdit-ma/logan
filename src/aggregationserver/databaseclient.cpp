@@ -18,9 +18,6 @@ void DatabaseClient::CreateTable(const std::string& table_name,
     std::stringstream query_stream;
 
     query_stream << "CREATE TABLE " << table_name << "(" << std::endl;
-    /*for (const auto& column_def : columns) {
-        query_stream << column_def.first << " " << column_def.second << "," << std::endl;
-    }*/
     const auto& last_col = std::prev(columns.end());
     std::for_each(columns.begin(), last_col,
         [&query_stream](const std::pair<std::string,std::string>& column_def) {
@@ -46,7 +43,7 @@ int DatabaseClient::InsertValues(const std::string& table_name,
                             const std::vector<std::string>& columns, const std::vector<std::string>& values) {
 
     std::stringstream query_stream;
-    std::string id_column = table_name + "ID";
+    std::string id_column = strip_schema(table_name) + "ID";
     int id_value = -1;
 
     query_stream << "INSERT INTO " << table_name;
@@ -94,7 +91,7 @@ int DatabaseClient::InsertValues(const std::string& table_name,
 int DatabaseClient::InsertValuesUnique(const std::string& table_name,
                             const std::vector<std::string>& columns, const std::vector<std::string>& values, const std::vector<std::string>& unique_cols) {
 
-    std::string id_column = table_name + "ID";
+    std::string id_column = strip_schema(table_name) + "ID";
     int id_value = -1;
     std::vector<std::string> unique_vals = std::vector<std::string>(unique_cols.size());
 

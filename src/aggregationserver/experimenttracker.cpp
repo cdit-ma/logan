@@ -64,17 +64,16 @@ int ExperimentTracker::RegisterExperimentRun(const std::string& experiment_name,
             return exp_info.job_num;
         }
     } else {
-            std::cout << "Added job to new experiment" << std::endl;
         ExperimentInfo new_exp;
         new_exp.name = experiment_name;
         new_exp.job_num = 0;
         new_exp.running = true;
+
         new_exp.receiver = std::unique_ptr<zmq::ProtoReceiver>(new zmq::ProtoReceiver());
-        new_exp.system_handler = std::unique_ptr<SystemEventProtoHandler>(new SystemEventProtoHandler(database_, *this));
+        new_exp.system_handler = std::unique_ptr<SystemEventProtoHandler>(new SystemEventProtoHandler(database_, *this, experiment_id));
         new_exp.model_handler = std::unique_ptr<ModelEventProtoHandler>(new ModelEventProtoHandler(database_, *this));
         new_exp.system_handler->BindCallbacks(*new_exp.receiver);
         new_exp.model_handler->BindCallbacks(*new_exp.receiver);
-        
 
         new_exp.experiment_run_id = database_->InsertValuesUnique(
             "ExperimentRun", 
@@ -112,6 +111,21 @@ int ExperimentTracker::GetCurrentRunID(int experiment_id){
     return GetExperimentInfo(experiment_id).experiment_run_id;
 }
 
+void ExperimentTracker::AddNodeIDWithHostname(int experiment_run_id, const std::string& hostname, int node_id) {
+    GetExperimentInfo(experiment_run_id).hostname_node_id_cache.emplace(std::make_pair(hostname, node_id));
+}
+
+int ExperimentTracker::GetNodeIDFromHostname(int experiment_run_id, const std::string& hostname) {
+    auto& exp_info = GetExperimentInfo(experiment_run_id);
+    try {
+        return exp_info.hostname_node_id_cache.at(hostname);
+    } catch (const std::out_of_range& oor_exception) {
+        // If we can't find anything then go back to the database
+        const auto& node_id = database_->GetID("Node", "Hostname = "+database_->EscapeString(hostname));
+        AddNodeIDWithHostname(experiment_run_id, hostname, node_id);
+        return node_id;
+    }
+}
 
 ExperimentInfo& ExperimentTracker::GetExperimentInfo(int experiment_id) {
     try {
