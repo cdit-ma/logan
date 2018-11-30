@@ -33,7 +33,7 @@ void DatabaseClient::CreateTable(const std::string& table_name,
         transaction.exec(query_stream.str());
         transaction.commit();
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "An exception occurred while trying to create a table in the database: " << e.what() << std::endl;
         throw;
     }
     
@@ -83,7 +83,7 @@ int DatabaseClient::InsertValues(const std::string& table_name,
         }
         throw std::runtime_error("ID associated with values not found in database query result");
     } catch (const std::exception& e)  {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "An exception occurred while trying to insert values into the database: " << e.what() << std::endl;
         throw;
     }
 }
@@ -209,7 +209,7 @@ const pqxx::result DatabaseClient::GetValues(const std::string table_name,
 
         return pg_result;
     } catch (const std::exception& e)  {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "An exception occurred while querying values from the database: " << e.what() << std::endl;
         throw;
     }
 }
@@ -281,7 +281,7 @@ const pqxx::result DatabaseClient::GetPortLifecycleEventInfo(
 
         return pg_result;
     } catch (const std::exception& e)  {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "An exception occurred while querying PortLifecycleEvents: " << e.what() << std::endl;
         throw;
     }
 }
@@ -329,7 +329,7 @@ const pqxx::result DatabaseClient::GetWorkloadEventInfo(
 
         return pg_result;
     } catch (const std::exception& e)  {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "An exception occurred while querying Workload info: " << e.what() << std::endl;
         throw;
     }
 }

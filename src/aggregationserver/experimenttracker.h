@@ -7,6 +7,7 @@
 #include <mutex>
 
 #include <map>
+#include <set>
 
 #include <zmq/protoreceiver/protoreceiver.h>
 
@@ -19,7 +20,7 @@ namespace NodeManager {
     class ControlMessage;
 }
 
-struct ExperimentInfo {
+struct ExperimentRunInfo {
     std::string name;
     int job_num;
     bool running;
@@ -48,12 +49,13 @@ public:
 
     void StartExperimentLoggerReceivers(int experiment_id);
 private:
-    ExperimentInfo& GetExperimentInfo(int experiment_id);
-    ExperimentInfo& GetExperimentInfo(const std::string& experiment_name);
+    ExperimentRunInfo& GetExperimentInfo(int experiment_run_id);
+    ExperimentRunInfo& GetExperimentInfo(const std::string& experiment_name);
     
 
     std::shared_ptr<DatabaseClient> database_;
-    std::map<int, ExperimentInfo> experiment_map_;
+    std::map<int, ExperimentRunInfo> experiment_run_map_;
+    std::set<int> active_experiment_ids_;
 
     std::mutex access_mutex_;
 };

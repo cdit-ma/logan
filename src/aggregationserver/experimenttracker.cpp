@@ -45,7 +45,7 @@ int ExperimentTracker::RegisterExperimentRun(const std::string& experiment_name,
     int experiment_id = database_->InsertValuesUnique("Experiment", columns, values, {"Name"});
     std::cout << "Experiment id: " << experiment_id << std::endl;
 
-    if (experiment_map_.count(experiment_id)) {
+    if (experiment_run_map_.count(experiment_id)) {
         auto& exp_info = GetExperimentInfo(experiment_id);
         if (!exp_info.running) {
             exp_info.running = true;
@@ -64,24 +64,24 @@ int ExperimentTracker::RegisterExperimentRun(const std::string& experiment_name,
             return exp_info.job_num;
         }
     } else {
-        ExperimentInfo new_exp;
-        new_exp.name = experiment_name;
-        new_exp.job_num = 0;
-        new_exp.running = true;
+        ExperimentRunInfo new_run;
+        new_run.name = experiment_name;
+        new_run.job_num = 0;
+        new_run.running = true;
 
-        new_exp.receiver = std::unique_ptr<zmq::ProtoReceiver>(new zmq::ProtoReceiver());
-        new_exp.system_handler = std::unique_ptr<SystemEventProtoHandler>(new SystemEventProtoHandler(database_, *this, experiment_id));
-        new_exp.model_handler = std::unique_ptr<ModelEventProtoHandler>(new ModelEventProtoHandler(database_, *this));
-        new_exp.system_handler->BindCallbacks(*new_exp.receiver);
-        new_exp.model_handler->BindCallbacks(*new_exp.receiver);
+        new_run.receiver = std::unique_ptr<zmq::ProtoReceiver>(new zmq::ProtoReceiver());
+        new_run.system_handler = std::unique_ptr<SystemEventProtoHandler>(new SystemEventProtoHandler(database_, *this, experiment_id));
+        new_run.model_handler = std::unique_ptr<ModelEventProtoHandler>(new ModelEventProtoHandler(database_, *this));
+        new_run.system_handler->BindCallbacks(*new_run.receiver);
+        new_run.model_handler->BindCallbacks(*new_run.receiver);
 
-        new_exp.experiment_run_id = database_->InsertValuesUnique(
+        new_run.experiment_run_id = database_->InsertValuesUnique(
             "ExperimentRun", 
             {"ExperimentID", "JobNum", "StartTime"},
-            {std::to_string(experiment_id), std::to_string(new_exp.job_num), start_time},
+            {std::to_string(experiment_id), std::to_string(new_run.job_num), start_time},
             {"JobNum", "ExperimentID"}
         );
-        experiment_map_.emplace(experiment_id, std::move(new_exp));
+        experiment_run_map_.emplace(experiment_id, std::move(new_run));
 
         return experiment_id;
     }
@@ -127,16 +127,16 @@ int ExperimentTracker::GetNodeIDFromHostname(int experiment_run_id, const std::s
     }
 }
 
-ExperimentInfo& ExperimentTracker::GetExperimentInfo(int experiment_id) {
+ExperimentRunInfo& ExperimentTracker::GetExperimentInfo(int experiment_id) {
     try {
-        return experiment_map_.at(experiment_id);
+        return experiment_run_map_.at(experiment_id);
     } catch (const std::exception&) {
         throw std::invalid_argument("No registered experiment run with ID: '" + std::to_string(experiment_id) + "'");
     }
 }
 
-ExperimentInfo& ExperimentTracker::GetExperimentInfo(const std::string& experiment_name){
-    for (auto& e_pair: experiment_map_) {
+ExperimentRunInfo& ExperimentTracker::GetExperimentInfo(const std::string& experiment_name){
+    for (auto& e_pair: experiment_run_map_) {
         if (experiment_name == e_pair.second.name) {
             return e_pair.second;
         }

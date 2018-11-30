@@ -105,8 +105,8 @@ int main(int argc, char** argv) {
 
     std::cout << "Number of events: " << lifecycleEvents.size() << std::endl;
 
-    std::cout << "stimulating" << std::endl;
-    aggServer->StimulatePorts(lifecycleEvents, *writer);
+    /*std::cout << "stimulating" << std::endl;
+    aggServer->StimulatePorts(lifecycleEvents, *writer);*/
     
     execution.Start();
 

@@ -26,11 +26,11 @@ void NodeManagerProtoHandler::BindCallbacks(zmq::ProtoReceiver& receiver) {
 
 
 void NodeManagerProtoHandler::ProcessEnvironmentMessage(const NodeManager::EnvironmentMessage& message) {
-    std::cout << "OMG IS A TEST" << std::endl;
     switch (message.type()) {
         case NodeManager::EnvironmentMessage::CONFIGURE_EXPERIMENT:
         case NodeManager::EnvironmentMessage::GET_EXPERIMENT_INFO:
         {
+            auto& cm = message.control_message();
             ProcessControlMessage(message.control_message());
             return;
         }
@@ -39,6 +39,8 @@ void NodeManagerProtoHandler::ProcessEnvironmentMessage(const NodeManager::Envir
             // TODO: Handle server shutdown properly
             throw std::logic_error("Shutdown handling not implemented");
         }
+        default:
+            throw std::logic_error("No handling implemented for EnvironmentMessage of type " + NodeManager::EnvironmentMessage::Type_Name(message.type()));
     }
 }
 
@@ -114,8 +116,9 @@ void NodeManagerProtoHandler::ProcessLogger(const NodeManager::Logger& message, 
             experiment_tracker_.RegisterModelEventProducer(experiment_id, endpoint);
             break;
         }
-        default :
-         std::cout << "Found a logger but we don't care lol" << std::endl;
+        default:
+            std::cout << "Disregarding logger of type " << NodeManager::Logger::Type_Name(message.type()) << std::endl;
+            break;
     }
 }
 

@@ -44,7 +44,7 @@ void ModelEventProtoHandler::ProcessLifecycleEvent(const ModelEvent::LifecycleEv
             try {
                 InsertPortLifecycleEvent(message.info(), message.type(), message.component(), message.port());
             } catch (const std::exception& e) {
-                std::cerr << e.what() << std::endl;
+                std::cerr << "An exception occured while trying to insert a PortLifecycleEvent: " << e.what() << std::endl;
             }
         } else {
             InsertComponentLifecycleEvent(message.info(), message.type(), message.component());
