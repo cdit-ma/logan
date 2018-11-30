@@ -53,12 +53,15 @@ void NodeManagerProtoHandler::ProcessControlMessage(const NodeManager::ControlMe
                 ProcessNode(node, experiment_id);
             }
 
+            std::cerr << "Starting the experiment logger receivers\n";
+
             experiment_tracker_.StartExperimentLoggerReceivers(experiment_id);
         }
     }
 }
 
 void NodeManagerProtoHandler::ProcessNode(const NodeManager::Node& message, int experiment_id) {
+
     int experiment_run_id = experiment_tracker_.GetCurrentRunID(experiment_id);
     std::string hostname = message.info().name();
     //std::cout << hostname << std::endl;

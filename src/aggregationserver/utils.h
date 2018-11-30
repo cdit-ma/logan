@@ -13,4 +13,10 @@ namespace AggServer {
     std::string FormatTimestamp(double timestamp);
 }
 
+// Trims leftmost part of string up to and including token, does nothing if no token found
+void ltrim(std::string& str, char token);
+
+// Removes schema and punctuation from qualified "Schema.Table" notation
+std::string strip_schema(const std::string& str);
+
 #endif

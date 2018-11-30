@@ -38,7 +38,7 @@ void ModelEventProtoHandler::BindCallbacks(zmq::ProtoReceiver& receiver) {
 }*/
 
 void ModelEventProtoHandler::ProcessLifecycleEvent(const ModelEvent::LifecycleEvent& message){
-    std::cerr << "InsertPortLifecycleEvent" << std::endl;
+    //std::cerr << "InsertPortLifecycleEvent" << std::endl;
     if (message.has_component()) {
         if (message.has_port()) {
             try {
@@ -54,7 +54,7 @@ void ModelEventProtoHandler::ProcessLifecycleEvent(const ModelEvent::LifecycleEv
 
 
 void ModelEventProtoHandler::ProcessWorkloadEvent(const ModelEvent::WorkloadEvent& message) {
-    std::cerr << "ProcessWorkloadEvent" << std::endl;
+    //std::cerr << "ProcessWorkloadEvent" << std::endl;
 
     std::string worker_instance_id = std::to_string(GetWorkerInstanceID(message.component(), message.worker().name(), message.info().experiment_name()));
     std::string function = message.function_name();
@@ -72,12 +72,10 @@ void ModelEventProtoHandler::ProcessWorkloadEvent(const ModelEvent::WorkloadEven
 }
 
 void ModelEventProtoHandler::ProcessUtilizationEvent(const ModelEvent::UtilizationEvent& message) {
-    std::cerr << "ProcessUtilizationEvent" << std::endl;
     std::string port_id = std::to_string(GetPortID(message.port(), message.component(), message.info().experiment_name()));
     std::string seq_num = std::to_string(message.port_event_id());
     std::string type = ModelEvent::UtilizationEvent::Type_Name(message.type());
     std::string msg = message.message();
-    //std::string sample_time = AggServer::FormatTimestamp(message.info().timestamp());
     std::string sample_time = TimeUtil::ToString(message.info().timestamp());
 
     database_->InsertValues(
@@ -123,7 +121,6 @@ void ModelEventProtoHandler::InsertPortLifecycleEvent(const ModelEvent::Info& in
     values.emplace_back(std::to_string(GetPortID(port, component, info.experiment_name())));
     //values.emplace_back(database_->EscapeString(AggServer::FormatTimestamp(info.timestamp())));
     values.emplace_back(TimeUtil::ToString(info.timestamp()));
-    std::cout << TimeUtil::ToString(info.timestamp()) << std::endl;
     values.emplace_back(std::to_string(type));
 
     database_->InsertValues("PortLifecycleEvent", columns, values);

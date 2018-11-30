@@ -64,8 +64,6 @@ private:
     std::unique_ptr<ExperimentTracker>  experiment_tracker;
 
     std::unique_ptr<AggregationProtoHandler> nodemanager_protohandler;
-    std::unique_ptr<AggregationProtoHandler> modelevent_protohandler;
-    std::unique_ptr<AggregationProtoHandler> systemevent_protohandler;
 };
 
 #endif 
