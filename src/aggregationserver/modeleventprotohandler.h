@@ -7,8 +7,8 @@
 
 class ModelEventProtoHandler : public AggregationProtoHandler {
 public:
-    ModelEventProtoHandler(std::shared_ptr<DatabaseClient> db_client, ExperimentTracker& exp_tracker)
-        : AggregationProtoHandler(db_client, exp_tracker) {};
+    ModelEventProtoHandler(std::shared_ptr<DatabaseClient> db_client, ExperimentTracker& exp_tracker, int experiment_run_id)
+        : AggregationProtoHandler(db_client, exp_tracker), experiment_run_id_(experiment_run_id) {};
 
     void BindCallbacks(zmq::ProtoReceiver& ProtoReceiver);
 
@@ -35,6 +35,8 @@ private:
     int GetPortID(const ModelEvent::Port& port, const ModelEvent::Component& component, const std::string& experiment_name);
     int GetWorkerInstanceID(const ModelEvent::Component& component_instance, const std::string& worker_name, const std::string& experiment_name);
 
+
+    int experiment_run_id_;
 };
 
 #endif

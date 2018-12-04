@@ -169,16 +169,8 @@ int ModelEventProtoHandler::GetWorkerInstanceID(const ModelEvent::Component& com
 
 int ModelEventProtoHandler::GetComponentID(const std::string& name, const std::string& experiment_name) {
     std::stringstream condition_stream;
-    condition_stream <<
-    "Name = " << database_->EscapeString(name) << " AND ExperimentRunID = (\
-        SELECT ExperimentRunID \
-        FROM ExperimentRun \
-        WHERE ExperimentID = (\
-            SELECT ExperimentID \
-            FROM Experiment \
-            WHERE Name = " << database_->EscapeString(experiment_name) << " \
-        )\
-    )";
+    condition_stream << "Name = " << database_->EscapeString(name) << " AND ExperimentRunID = " << experiment_run_id_;
+
 
     return database_->GetID("Component", condition_stream.str());
 }

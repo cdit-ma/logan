@@ -209,7 +209,9 @@ const pqxx::result DatabaseClient::GetValues(const std::string table_name,
 
         return pg_result;
     } catch (const std::exception& e)  {
-        std::cerr << "An exception occurred while querying values from the database: " << e.what() << std::endl;
+        std::cerr << "An exception occurred while querying values from the database: " <<std::endl;
+        std::cerr << query_stream.str() << std::endl;
+        std::cerr << e.what() << std::endl;
         throw;
     }
 }

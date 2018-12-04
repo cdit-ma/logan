@@ -36,26 +36,26 @@ class ExperimentTracker {
 public:
     ExperimentTracker(std::shared_ptr<DatabaseClient> db_client);
     int RegisterExperimentRun(const std::string& experiment_name, double timestamp);
+    void ShutdownExperimentRun(const std::string& experiment_name, double timestamp);
 
-    void RegisterSystemEventProducer(int experiment_id, const std::string& endpoint);
-    void RegisterModelEventProducer(int experiment_id, const std::string& endpoint);
+    void RegisterSystemEventProducer(int experiment_run_id, const std::string& endpoint);
+    void RegisterModelEventProducer(int experiment_run_id, const std::string& endpoint);
 
-    int GetCurrentRunJobNum(const std::string& experiment_name);
-    int GetCurrentRunID(const std::string& experiment_name);
+    int GetExperimentID(const std::string& experiment_name);
     int GetCurrentRunID(int experiment_id);
 
-    void AddNodeIDWithHostname(int experiment_id, const std::string& hostname, int node_id);
-    int GetNodeIDFromHostname(int experiment_id, const std::string& hostname);
+    void AddNodeIDWithHostname(int experiment_run_id, const std::string& hostname, int node_id);
+    int GetNodeIDFromHostname(int experiment_run_id, const std::string& hostname);
 
-    void StartExperimentLoggerReceivers(int experiment_id);
 private:
-    ExperimentRunInfo& GetExperimentInfo(int experiment_run_id);
-    ExperimentRunInfo& GetExperimentInfo(const std::string& experiment_name);
+    ExperimentRunInfo& GetExperimentRunInfo(int experiment_run_id);
     
 
     std::shared_ptr<DatabaseClient> database_;
     std::map<int, ExperimentRunInfo> experiment_run_map_;
-    std::set<int> active_experiment_ids_;
+    std::map<int, int> active_experiment_ids_;  // Maps ExperimentID -> current ExperimentRunID
+
+    std::map<std::string, int> experiment_name_cache_; // Maps Experiment.Name to ExperimentID
 
     std::mutex access_mutex_;
 };
