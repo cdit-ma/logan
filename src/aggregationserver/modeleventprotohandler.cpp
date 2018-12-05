@@ -145,6 +145,7 @@ int ModelEventProtoHandler::GetComponentInstanceID(const ModelEvent::Component& 
     try {
         return component_inst_id_cache_.at(component_instance.id());
     } catch (const std::out_of_range& oor_ex) {
+        std::cerr << "ComponentInstance ID cache miss\n";
         int component_id = GetComponentID(component_instance.type());
 
         std::string&& comp_id = database_->EscapeString(std::to_string(component_id));
@@ -164,6 +165,7 @@ int ModelEventProtoHandler::GetPortID(const ModelEvent::Port& port, const ModelE
     try {
         return port_id_cache_.at(port.id());
     } catch (const std::out_of_range& oor_ex) {
+        std::cerr << "Port ID cache miss\n";
         int component_instance_id = GetComponentInstanceID(component);
         
         std::string&& comp_inst_id = database_->EscapeString(std::to_string(component_instance_id));
@@ -182,6 +184,7 @@ int ModelEventProtoHandler::GetWorkerInstanceID(const ModelEvent::Component& com
     try {
         return worker_inst_id_cache_.at(worker_instance.id());
     } catch (const std::out_of_range& oor_ex) {
+        std::cerr << "WrokerInstance ID cache miss\n";
         int component_instance_id = GetComponentInstanceID(component);
 
         std::string&& comp_inst_id = database_->EscapeString(std::to_string(component_instance_id));
@@ -200,6 +203,7 @@ int ModelEventProtoHandler::GetComponentID(const std::string& name) {
     try {
         return component_id_cache_.at(name);
     } catch (const std::out_of_range& oor_ex) {
+        std::cerr << "Component ID cache miss\n";
         std::stringstream condition_stream;
         condition_stream << "Name = " << database_->EscapeString(name) << " AND ExperimentRunID = " << experiment_run_id_;
 
