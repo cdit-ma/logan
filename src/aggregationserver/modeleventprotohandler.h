@@ -5,6 +5,8 @@
 
 #include <proto/modelevent/modelevent.pb.h>
 
+#include <map>
+
 class ModelEventProtoHandler : public AggregationProtoHandler {
 public:
     ModelEventProtoHandler(std::shared_ptr<DatabaseClient> db_client, ExperimentTracker& exp_tracker, int experiment_run_id)
@@ -30,13 +32,18 @@ private:
             const ModelEvent::Port& port);
 
     // ID retrieval helpers
-    int GetComponentID(const std::string& name, const std::string& experiment_name);
-    int GetComponentInstanceID(const ModelEvent::Component& component_instance, const std::string& experiment_name);
-    int GetPortID(const ModelEvent::Port& port, const ModelEvent::Component& component, const std::string& experiment_name);
-    int GetWorkerInstanceID(const ModelEvent::Component& component_instance, const std::string& worker_name, const std::string& experiment_name);
+    int GetComponentID(const std::string& name);
+    int GetComponentInstanceID(const ModelEvent::Component& component_instance);
+    int GetPortID(const ModelEvent::Port& port, const ModelEvent::Component& component);
+    int GetWorkerInstanceID(const ModelEvent::Component& component_instance, const ModelEvent::Worker& worker_instance);
 
 
     int experiment_run_id_;
+
+    std::map<std::string, int> component_id_cache_;
+    std::map<std::string, int> component_inst_id_cache_;
+    std::map<std::string, int> port_id_cache_;
+    std::map<std::string, int> worker_inst_id_cache_;
 };
 
 #endif
