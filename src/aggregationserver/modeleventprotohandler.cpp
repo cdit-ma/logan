@@ -95,7 +95,7 @@ void ModelEventProtoHandler::ProcessUtilizationEvent(const ModelEvent::Utilizati
     auto id_delay = std::chrono::duration_cast<std::chrono::microseconds>(port_id_aquired_time - start);
     auto total_delay = std::chrono::duration_cast<std::chrono::microseconds>(finish - start);
 
-    std::cout << "PortEvent delay = " << total_delay.count() << " (" << id_delay.count() << " spent fetching port_id)" << std::endl;
+    std::cerr << "PortEvent delay = " << total_delay.count() << " (" << id_delay.count() << " spent fetching port_id)";
 }
 
 void ModelEventProtoHandler::InsertComponentLifecycleEvent(const ModelEvent::Info& info,
