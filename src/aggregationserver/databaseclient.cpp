@@ -269,7 +269,7 @@ const pqxx::result DatabaseClient::GetPortLifecycleEventInfo(
     if (end_time != AggServer::FormatTimestamp(0.0)) {
         query_stream << "AND PortLifecycleEvent.SampleTime <= '" << /*connection_.quote(*/end_time/*)*/ << "'";
     }
-    //query_stream << " ORDER BY PortLifecycleEvent.SampleTime";
+    query_stream << " ORDER BY PortLifecycleEvent.SampleTime";
     query_stream << std::endl;
 
     std::lock_guard<std::mutex> conn_guard(conn_mutex_);
@@ -318,6 +318,7 @@ const pqxx::result DatabaseClient::GetWorkloadEventInfo(
     if (end_time != AggServer::FormatTimestamp(0.0)) {
         query_stream << "AND WorkloadEvent.SampleTime <= '" << /*connection_.quote(*/end_time/*)*/ << "'";
     }
+    query_stream << " ORDER BY WorkloadEvent.SampleTime";
     query_stream << std::endl;
 
     std::lock_guard<std::mutex> conn_guard(conn_mutex_);
