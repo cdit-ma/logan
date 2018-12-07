@@ -164,7 +164,12 @@ AggServer::AggregationReplier::ProcessWorkloadEventRequest(const AggServer::Work
             std::string type_string = row["Type"].as<std::string>();
             bool did_parse_workloadtype = WorkloadEvent::WorkloadEventType_Parse(type_string, &type);
             if (!did_parse_workloadtype) {
-                throw std::runtime_error("Unable to parse WorkloadEventType from string: "+type_string);
+                // Workaround for string mismatch due to Windows being unable to handle ERROR as a name (LOG-94)
+                if (type_string == "ERROR") {
+                    type = WorkloadEvent::ERROR_EVENT;
+                } else {
+                    throw std::runtime_error("Unable to parse WorkloadEventType from string: "+type_string);
+                }
             }
             event->set_type(type);
             //event->set_type((AggServer::WorkloadEvent::WorkloadEventType)type_int);
