@@ -5,12 +5,20 @@
 
 #include <algorithm>
 
+#include <chrono>
+
 #include "utils.h"
 
 DatabaseClient::DatabaseClient(const std::string& connection_details) : 
-    connection_(connection_details)
+    connection_(connection_details),
+    batched_connection_(connection_details)
 {
 
+}
+
+DatabaseClient::~DatabaseClient() {
+    std::lock_guard<std::mutex> trans_lock(batched_transaction_mutex_);
+    FlushBatchedTransaction();
 }
 
 void DatabaseClient::CreateTable(const std::string& table_name,
@@ -33,7 +41,7 @@ void DatabaseClient::CreateTable(const std::string& table_name,
         transaction.exec(query_stream.str());
         transaction.commit();
     } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "An exception occurred while trying to create a table in the database: " << e.what() << std::endl;
         throw;
     }
     
@@ -65,9 +73,24 @@ int DatabaseClient::InsertValues(const std::string& table_name,
     std::lock_guard<std::mutex> conn_guard(conn_mutex_);
 
     try {
-        pqxx::work transaction(connection_, "InsertValuesTransaction");
+
+        auto start = std::chrono::steady_clock::now();
+        //pqxx::work transaction(connection_, "InsertValuesTransaction");
+        auto& transaction = AquireBatchedTransaction();
+
+        auto made_transaction = std::chrono::steady_clock::now();
         auto&& result = transaction.exec(query_stream.str());
-        transaction.commit();
+
+        auto executed_trans = std::chrono::steady_clock::now();
+        //transaction.commit();
+        ReleaseBatchedTransaction();
+
+        auto all_done = std::chrono::steady_clock::now();
+        auto create_delay = std::chrono::duration_cast<std::chrono::microseconds>(made_transaction - start);
+        auto execute_delay = std::chrono::duration_cast<std::chrono::microseconds>(executed_trans - made_transaction);
+        auto commit_delay = std::chrono::duration_cast<std::chrono::microseconds>(all_done - executed_trans);
+
+    std::cerr << "Create : " << create_delay.count() << ", execute: " << execute_delay.count() << ", commit: " << commit_delay.count() << '\n';
 
         std::string lower_id_column(id_column);
         std::transform(lower_id_column.begin(), lower_id_column.end(), lower_id_column.begin(), ::tolower);
@@ -83,7 +106,7 @@ int DatabaseClient::InsertValues(const std::string& table_name,
         }
         throw std::runtime_error("ID associated with values not found in database query result");
     } catch (const std::exception& e)  {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "An exception occurred while trying to insert values into the database: " << e.what() << std::endl;
         throw;
     }
 }
@@ -209,6 +232,8 @@ const pqxx::result DatabaseClient::GetValues(const std::string table_name,
 
         return pg_result;
     } catch (const std::exception& e)  {
+        std::cerr << "An exception occurred while querying values from the database: " <<std::endl;
+        std::cerr << query_stream.str() << std::endl;
         std::cerr << e.what() << std::endl;
         throw;
     }
@@ -281,7 +306,7 @@ const pqxx::result DatabaseClient::GetPortLifecycleEventInfo(
 
         return pg_result;
     } catch (const std::exception& e)  {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "An exception occurred while querying PortLifecycleEvents: " << e.what() << std::endl;
         throw;
     }
 }
@@ -330,7 +355,7 @@ const pqxx::result DatabaseClient::GetWorkloadEventInfo(
 
         return pg_result;
     } catch (const std::exception& e)  {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "An exception occurred while querying Workload info: " << e.what() << std::endl;
         throw;
     }
 }
@@ -382,4 +407,28 @@ const std::string DatabaseClient::BuildColTuple(const std::vector<std::string>& 
     tuple_stream << ")";
 
     return tuple_stream.str();
+}
+
+pqxx::work& DatabaseClient::AquireBatchedTransaction() {
+    std::lock_guard<std::mutex> trans_guard(batched_transaction_mutex_);
+
+    if (batched_transaction == nullptr) {
+        batched_transaction = std::unique_ptr<pqxx::work>(new pqxx::work(batched_connection_, "BatchedTransaction"));
+        batched_write_count_ = 0;
+    }
+    return *batched_transaction;
+}
+
+void DatabaseClient::ReleaseBatchedTransaction() {
+    std::lock_guard<std::mutex> trans_guard(batched_transaction_mutex_);
+    
+    batched_write_count_++;
+    if (batched_write_count_ > 1000) {
+        FlushBatchedTransaction();
+    }
+}
+
+void DatabaseClient::FlushBatchedTransaction() {
+    batched_transaction->commit();
+    batched_transaction.reset();
 }

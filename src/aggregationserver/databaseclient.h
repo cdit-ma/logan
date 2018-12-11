@@ -12,6 +12,7 @@
 class DatabaseClient {
 public:
     DatabaseClient(const std::string& connection_details);
+    ~DatabaseClient();
     void Connect(const std::string& connection_string){};
 
     void CreateTable(
@@ -67,10 +68,20 @@ private:
     );
     const std::string BuildColTuple(const std::vector<std::string>& cols);
 
+    pqxx::work& AquireBatchedTransaction();
+    void ReleaseBatchedTransaction();
+    // Aquire batch transaction lock before flushing
+    void FlushBatchedTransaction();
+    
 
     pqxx::connection connection_;
+    pqxx::connection batched_connection_;
+
+    std::unique_ptr<pqxx::work> batched_transaction;
+    unsigned int batched_write_count_; 
 
     std::mutex conn_mutex_;
+    std::mutex batched_transaction_mutex_;
 };
 
 #endif //LOGAN_DATABASECLIENT_H
