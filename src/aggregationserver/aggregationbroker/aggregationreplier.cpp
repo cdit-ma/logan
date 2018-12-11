@@ -65,7 +65,7 @@ AggServer::AggregationReplier::ProcessExperimentRunRequest(const AggServer::Expe
     } else {
         int id = database_->GetID(
             "Experiment",
-            exp_name
+            "Name = " + database_->EscapeString(exp_name)
         );
         exp_name_id_pairs.emplace_back(std::make_pair(exp_name, id));
     }
@@ -80,7 +80,7 @@ AggServer::AggregationReplier::ProcessExperimentRunRequest(const AggServer::Expe
 
         const auto& results = database_->GetValues(
             "ExperimentRun",
-            {"ExperimentID", "JobNum", "StartTime", "EndTime"},
+            {"ExperimentRunID", "JobNum", "StartTime", "EndTime"},
             condition_stream.str()
         );
 
