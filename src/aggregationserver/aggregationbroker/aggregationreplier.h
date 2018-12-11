@@ -12,6 +12,15 @@ class AggregationReplier : public zmq::ProtoReplier {
 public:
     AggregationReplier(std::shared_ptr<DatabaseClient> db_client);
 
+    std::unique_ptr<AggServer::ExperimentRunResponse>
+    ProcessExperimentRunRequest(
+        const AggServer::ExperimentRunRequest& message
+    );
+
+    std::unique_ptr<AggServer::ExperimentStateResponse>
+    ProcessExperimentStateRequest(
+        const AggServer::ExperimentStateRequest& message
+    );
 
     std::unique_ptr<AggServer::PortLifecycleResponse>
     ProcessPortLifecycleRequest(
@@ -22,6 +31,7 @@ public:
     ProcessWorkloadEventRequest(
         const AggServer::WorkloadRequest& message
     );
+
 
 private:
     std::shared_ptr<DatabaseClient> database_;

@@ -14,24 +14,96 @@ AggServer::AggregationReplier::AggregationReplier(std::shared_ptr<DatabaseClient
     //     {"Port.Path"},
     //     {"ComponentAssembly.0//SubscriberPort"}
     // );
-    const auto&& res = database_->GetWorkloadEventInfo(
+    /*const auto&& res = database_->GetWorkloadEventInfo(
         "1970-01-01T00:00:00.000000Z",
         "2020-01-01T9:10:23.924073Z",
         {"WorkerInstance.Path"},
         {"TestAssembly.1/ReceiverInstance/Utility_Worker"}
     );
     std::cout << "num affected rows" << res.size() << std::endl;
+    */
 }
 
 void AggServer::AggregationReplier::RegisterCallbacks() {
-    RegisterProtoCallback<AggServer::PortLifecycleRequest, AggServer::PortLifecycleResponse>(
+    RegisterProtoCallback<ExperimentRunRequest, ExperimentRunResponse>(
+        "GetExperimentRuns",
+        std::bind(&AggregationReplier::ProcessExperimentRunRequest, this, std::placeholders::_1)
+    );
+    RegisterProtoCallback<ExperimentStateRequest, ExperimentStateResponse>(
+        "GetExperimentState",
+        std::bind(&AggregationReplier::ProcessExperimentStateRequest, this, std::placeholders::_1)
+    );
+    RegisterProtoCallback<PortLifecycleRequest, PortLifecycleResponse>(
         "GetPortLifecycle",
         std::bind(&AggregationReplier::ProcessPortLifecycleRequest, this, std::placeholders::_1)
     );
-    RegisterProtoCallback<AggServer::WorkloadRequest, AggServer::WorkloadResponse>(
+    RegisterProtoCallback<WorkloadRequest, WorkloadResponse>(
         "GetWorkload",
         std::bind(&AggregationReplier::ProcessWorkloadEventRequest, this, std::placeholders::_1)
     );
+}
+
+std::unique_ptr<AggServer::ExperimentRunResponse>
+AggServer::AggregationReplier::ProcessExperimentRunRequest(const AggServer::ExperimentRunRequest& message) {
+    std::unique_ptr<ExperimentRunResponse> response(new ExperimentRunResponse());
+
+    const std::string& exp_name = message.experiment_name();
+    std::vector<std::pair<std::string, int> > exp_name_id_pairs;
+
+    std::stringstream condition_stream;
+    if (exp_name == "") {
+        // If no name is provided ask the database for the list of all names and ExperimentIDs
+        const auto& results = database_->GetValues(
+            "Experiment",
+            {"Name", "ExperimentID"}
+        );
+        for (const auto& row : results) {
+            const auto& name = row.at("Name").as<std::string>();
+            const auto& id = row.at("ExperimentID").as<int>();
+            exp_name_id_pairs.emplace_back(std::make_pair(name, id));
+        }
+    } else {
+        int id = database_->GetID(
+            "Experiment",
+            exp_name
+        );
+        exp_name_id_pairs.emplace_back(std::make_pair(exp_name, id));
+    }
+
+    for (const auto& pair : exp_name_id_pairs) {
+        const auto& name = pair.first;
+        const auto& id = pair.second;
+        auto exp_info = response->add_experiments();
+        exp_info->set_name(name);
+
+        condition_stream << "ExperimentID = " << id;
+
+        const auto& results = database_->GetValues(
+            "ExperimentRun",
+            {"ExperimentID", "JobNum", "StartTime", "EndTime"},
+            condition_stream.str()
+        );
+
+        for (const auto& row : results) {
+            auto run = exp_info->add_runs();
+            run->set_experiment_run_id(row.at("ExperimentRunID").as<int>());
+            run->set_job_num(row.at("JobNum").as<int>());
+            TimeUtil::FromString(row.at("StartTime").as<std::string>(), run->mutable_start_time());
+            try {
+                std::string end_time_str = row.at("EndTime").as<std::string>();
+                TimeUtil::FromString(end_time_str, run->mutable_end_time());
+            } catch (const std::exception& e) {
+                std::cerr << "An exception occurred while querying experiment run end time, likely due to null: " << e.what() << "\n";
+            }
+        }
+    }
+
+    return response;
+}
+
+std::unique_ptr<AggServer::ExperimentStateResponse>
+AggServer::AggregationReplier::ProcessExperimentStateRequest(const AggServer::ExperimentStateRequest& message) {
+    throw std::runtime_error("ExperimentStateRequest handling not yet implemented");
 }
 
 std::unique_ptr<AggServer::PortLifecycleResponse>
@@ -61,6 +133,8 @@ AggServer::AggregationReplier::ProcessPortLifecycleRequest(const AggServer::Port
     // Get filter conditions
     std::vector<std::string> condition_cols;
     std::vector<std::string> condition_vals;
+    condition_cols.emplace_back("Component.ExperimentRunID");
+    condition_vals.emplace_back(std::to_string(message.experiment_run_id()));
     for(const auto& port_path : message.port_paths()) {
         condition_cols.emplace_back("Port.Path");
         condition_vals.emplace_back(port_path);
@@ -140,6 +214,8 @@ AggServer::AggregationReplier::ProcessWorkloadEventRequest(const AggServer::Work
     // Get filter conditions
     std::vector<std::string> condition_cols;
     std::vector<std::string> condition_vals;
+    condition_cols.emplace_back("Component.ExperimentRunID");
+    condition_vals.emplace_back(std::to_string(message.experiment_run_id()));
     for(const auto& worker_path : message.worker_paths()) {
         condition_cols.emplace_back("Worker.Path");
         condition_vals.emplace_back(worker_path);
