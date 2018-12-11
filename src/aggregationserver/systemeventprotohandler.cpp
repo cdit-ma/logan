@@ -18,6 +18,25 @@ void SystemEventProtoHandler::BindCallbacks(zmq::ProtoReceiver& receiver) {
     receiver.RegisterProtoCallback<SystemEvent::InfoEvent>(std::bind(&SystemEventProtoHandler::ProcessInfoEvent, this, std::placeholders::_1));
 }
 
+void SystemEventProtoHandler::ProcessStatusEvent(const SystemEvent::StatusEvent& event) {
+    const std::string& hostname = event.hostname();
+    const std::string& time_str = TimeUtil::ToString(event.timestamp());
+    const auto& cpu_util = std::to_string(event.cpu_utilization());
+    const auto& phys_mem = std::to_string(event.phys_mem_utilization());
+
+    std::string system_id = "-1";
+    try {
+        system_id = std::to_string(system_id_cache_.at(hostname));
+    } catch (const std::out_of_range& oor_ex) {
+        std::cerr << "Failed to insert StatusEvent for hostname '" << hostname << "', " << oor_ex.what() << "\n";
+    }
+
+    database_->InsertValues(
+        "Hardware.SystemStatus",
+        {"SystemID", "SampleTime", "CPUUtilisation", "PhysMemUtilisation"},
+        {system_id, time_str, cpu_util, phys_mem}
+    );
+}
 
 void SystemEventProtoHandler::ProcessInfoEvent(const SystemEvent::InfoEvent& info) {
     //const std::string& timestamp = TimeUtil::ToString(info.timestamp());
@@ -38,12 +57,15 @@ void SystemEventProtoHandler::ProcessInfoEvent(const SystemEvent::InfoEvent& inf
 
     const std::string& physical_memory = std::to_string(info.physical_memory_kilobytes());
 
-    database_->InsertValuesUnique(
+    int system_id = database_->InsertValuesUnique(
         "Hardware.System",
         {"NodeID", "OSName", "OSArch", "OSDescription", "OSVersion", "OSVendor", "OSVendorName", "CPUModel", "CPUVendor", "CPUFrequencyHZ", "PhysicalMemoryKB"},
         {node_id_str, os_name, os_arch, os_desc, os_version, os_vendor, os_vendor_name, cpu_model, cpu_vendor, cpu_frequency, physical_memory},
         {"NodeID"}
     );
+
+    system_id_cache_.emplace(std::make_pair(hostname, system_id));
+    std::cout << "Adding system info for hostname: " << hostname << " with id " << system_id << std::endl;
 
     for (const auto& fs_info : info.file_system_info()) {
         ProcessFileSystemInfo(fs_info, node_id);
