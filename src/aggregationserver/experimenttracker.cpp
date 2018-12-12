@@ -8,6 +8,7 @@
 #include "databaseclient.h"
 
 #include "utils.h"
+#include <google/protobuf/util/time_util.h>
 
 #include <zmq/protoreceiver/protoreceiver.h>
 
@@ -21,8 +22,11 @@ ExperimentTracker::ExperimentTracker(std::shared_ptr<DatabaseClient> db_client) 
     }
 
 int ExperimentTracker::RegisterExperimentRun(const std::string& experiment_name, double timestamp) {
-
-    std::string start_time = AggServer::FormatTimestamp(timestamp);
+    // TODO: quick fix for demo, should drive time value off of message once it is being populated
+    //std::string start_time = AggServer::FormatTimestamp(timestamp);
+    using google::protobuf::util::TimeUtil;
+    std::string start_time = TimeUtil::ToString(TimeUtil::GetCurrentTime());
+    
     std::cout << "Registering experiment with name " << experiment_name << " @ time " << timestamp << std::endl;
 
     std::lock_guard<std::mutex> access_lock(access_mutex_);

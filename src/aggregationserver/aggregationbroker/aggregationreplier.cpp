@@ -77,7 +77,11 @@ AggServer::AggregationReplier::ProcessExperimentRunRequest(const AggServer::Expe
 
         const auto& results = database_->GetValues(
             "ExperimentRun",
-            {"ExperimentRunID", "JobNum", "StartTime", "EndTime"},
+            {
+                "ExperimentRunID",
+                "JobNum",
+                "to_char((starttime::timestamp), 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS StartTime",
+                "to_char((endtime::timestamp), 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS EndTime"},
             "ExperimentID = " + std::to_string(id)
         );
 
@@ -85,7 +89,12 @@ AggServer::AggregationReplier::ProcessExperimentRunRequest(const AggServer::Expe
             auto run = exp_info->add_runs();
             run->set_experiment_run_id(row.at("ExperimentRunID").as<int>());
             run->set_job_num(row.at("JobNum").as<int>());
-            TimeUtil::FromString(row.at("StartTime").as<std::string>(), run->mutable_start_time());
+            std::string start_time_str = row.at("StartTime").as<std::string>();
+            std::cout << start_time_str << std::endl;
+            bool success = TimeUtil::FromString(start_time_str, run->mutable_start_time());
+            if (!success) {
+                throw std::runtime_error("Unable to parse ExperimentRun.StartTime from in-database string representation");
+            }
             try {
                 std::string end_time_str = row.at("EndTime").as<std::string>();
                 TimeUtil::FromString(end_time_str, run->mutable_end_time());
