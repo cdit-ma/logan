@@ -50,7 +50,6 @@ AggServer::AggregationReplier::ProcessExperimentRunRequest(const AggServer::Expe
     const std::string& exp_name = message.experiment_name();
     std::vector<std::pair<std::string, int> > exp_name_id_pairs;
 
-    std::stringstream condition_stream;
     if (exp_name == "") {
         // If no name is provided ask the database for the list of all names and ExperimentIDs
         const auto& results = database_->GetValues(
@@ -76,12 +75,10 @@ AggServer::AggregationReplier::ProcessExperimentRunRequest(const AggServer::Expe
         auto exp_info = response->add_experiments();
         exp_info->set_name(name);
 
-        condition_stream << "ExperimentID = " << id;
-
         const auto& results = database_->GetValues(
             "ExperimentRun",
             {"ExperimentRunID", "JobNum", "StartTime", "EndTime"},
-            condition_stream.str()
+            "ExperimentID = " + std::to_string(id)
         );
 
         for (const auto& row : results) {
