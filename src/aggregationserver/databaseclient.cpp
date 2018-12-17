@@ -84,13 +84,14 @@ int DatabaseClient::InsertValues(const std::string& table_name,
         auto executed_trans = std::chrono::steady_clock::now();
         //transaction.commit();
         ReleaseBatchedTransaction();
+        FlushBatchedTransaction();  //TODO: remove this once we can actually figure out when things are going down
 
         auto all_done = std::chrono::steady_clock::now();
         auto create_delay = std::chrono::duration_cast<std::chrono::microseconds>(made_transaction - start);
         auto execute_delay = std::chrono::duration_cast<std::chrono::microseconds>(executed_trans - made_transaction);
         auto commit_delay = std::chrono::duration_cast<std::chrono::microseconds>(all_done - executed_trans);
 
-    std::cerr << "Create : " << create_delay.count() << ", execute: " << execute_delay.count() << ", commit: " << commit_delay.count() << '\n';
+    //std::cerr << "Create : " << create_delay.count() << ", execute: " << execute_delay.count() << ", commit: " << commit_delay.count() << '\n';
 
         std::string lower_id_column(id_column);
         std::transform(lower_id_column.begin(), lower_id_column.end(), lower_id_column.begin(), ::tolower);
@@ -356,6 +357,46 @@ const pqxx::result DatabaseClient::GetWorkloadEventInfo(
         return pg_result;
     } catch (const std::exception& e)  {
         std::cerr << "An exception occurred while querying Workload info: " << e.what() << std::endl;
+        throw;
+    }
+}
+
+const pqxx::result DatabaseClient::GetCPUUtilInfo(
+        std::string start_time,
+        std::string end_time,
+        const std::vector<std::string>& condition_columns,
+        const std::vector<std::string>& condition_values
+) {
+    std::stringstream query_stream;
+
+    query_stream << "SELECT Hardware.SystemStatus.CPUUtilisation AS CPUUtilisation, to_char((sampletime::timestamp), 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"') AS SampleTime,\n";
+    query_stream << "   Node.Hostname AS NodeHostname, Node.IP AS NodeIP, Node.GraphmlID AS NodeGraphmlID, Node.ExperimentRunID AS RunID\n";
+    query_stream << "FROM Hardware.SystemStatus INNER JOIN Hardware.System ON Hardware.SystemStatus.SystemID = Hardware.System.SystemID\n";
+    query_stream << "   INNER JOIN Node ON Hardware.System.NodeID = Node.NodeID\n";
+
+    if (condition_columns.size() != 0) {
+        query_stream << BuildWhereClause(condition_columns, condition_values) << " AND ";
+    } else {
+        query_stream << "WHERE ";
+    }
+    query_stream << "Hardware.SystemStatus.SampleTime >= '" << /*connection_.quote(*/start_time/*)*/ << "'";
+
+    if (end_time != AggServer::FormatTimestamp(0.0)) {
+        query_stream << "AND Hardware.SystemStatus.SampleTime <= '" << /*connection_.quote(*/end_time/*)*/ << "'";
+    }
+    query_stream << " ORDER BY Node.HostName, Hardware.SystemStatus.SampleTime ASC";
+    query_stream << std::endl;
+
+    std::lock_guard<std::mutex> conn_guard(conn_mutex_);
+
+    try {
+        pqxx::work transaction(connection_, "GetCPUUtilisationTransaction");
+        const auto& pg_result = transaction.exec(query_stream.str());
+        transaction.commit();
+
+        return pg_result;
+    } catch (const std::exception& e)  {
+        std::cerr << "An exception occurred while querying CPUUtilisation info: " << e.what() << std::endl;
         throw;
     }
 }

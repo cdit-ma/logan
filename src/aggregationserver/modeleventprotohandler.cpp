@@ -38,7 +38,7 @@ void ModelEventProtoHandler::BindCallbacks(zmq::ProtoReceiver& receiver) {
 }*/
 
 void ModelEventProtoHandler::ProcessLifecycleEvent(const ModelEvent::LifecycleEvent& message){
-    std::cerr << "InsertPortLifecycleEvent" << std::endl;
+    //std::cerr << "InsertPortLifecycleEvent" << std::endl;
     if (message.has_component()) {
         if (message.has_port()) {
             try {

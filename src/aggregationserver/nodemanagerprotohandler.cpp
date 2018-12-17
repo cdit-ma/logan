@@ -182,7 +182,7 @@ void NodeManagerProtoHandler::ProcessWorker(const NodeManager::Worker& message, 
         "Worker",
         {"Name", "ExperimentRunID", "GraphmlID"},
         {message.info().type(), std::to_string(experiment_run_id), message.info().id()},
-        {"Name"}
+        {"Name", "ExperimentRunID"}
     );
 
     std::string worker_path = component_path + "/" + message.info().name();

@@ -32,6 +32,10 @@ public:
         const AggServer::WorkloadRequest& message
     );
 
+    std::unique_ptr<AggServer::CPUUtilisationResponse>
+    ProcessCPUUtilisationRequest(
+        const AggServer::CPUUtilisationRequest& message
+    );
 
 private:
     std::shared_ptr<DatabaseClient> database_;

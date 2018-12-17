@@ -41,6 +41,10 @@ void AggServer::AggregationReplier::RegisterCallbacks() {
         "GetWorkload",
         std::bind(&AggregationReplier::ProcessWorkloadEventRequest, this, std::placeholders::_1)
     );
+    RegisterProtoCallback<CPUUtilisationRequest, CPUUtilisationResponse>(
+        "GetCPUUtilisation",
+        std::bind(&AggregationReplier::ProcessCPUUtilisationRequest, this, std::placeholders::_1)
+    );
 }
 
 std::unique_ptr<AggServer::ExperimentRunResponse>
@@ -275,6 +279,72 @@ AggServer::AggregationReplier::ProcessWorkloadEventRequest(const AggServer::Work
         std::cerr << "An exception occurred while querying PortLifecycleEvents:" << ex.what() << std::endl;
         throw;
     }
+
+    return response;
+}
+
+std::unique_ptr<AggServer::CPUUtilisationResponse>
+AggServer::AggregationReplier::ProcessCPUUtilisationRequest(const AggServer::CPUUtilisationRequest& message) {
+    std::unique_ptr<CPUUtilisationResponse> response(new CPUUtilisationResponse());
+
+    std::string start, end;
+
+    // Start time defaults to 0 if not specified
+    if (message.time_interval_size() >= 1) {
+        start = TimeUtil::ToString(message.time_interval()[0]);
+    } else {
+
+        start = TimeUtil::ToString(TimeUtil::SecondsToTimestamp(0));
+    }
+
+    // End time defaults to 0 if not specified
+    if (message.time_interval_size() >= 2) {
+        end = TimeUtil::ToString(message.time_interval()[1]);
+    } else {
+        end = TimeUtil::ToString(TimeUtil::SecondsToTimestamp(0));
+    }
+
+    // Get filter conditions
+    std::vector<std::string> condition_cols;
+    std::vector<std::string> condition_vals;
+    condition_cols.emplace_back("Node.ExperimentRunID");
+    condition_vals.emplace_back(std::to_string(message.experiment_run_id()));
+    for(const auto& hostname : message.node_ids()) {
+        condition_cols.emplace_back("Node.HostName");
+        condition_vals.emplace_back(hostname);
+    }
+
+    try {
+        // NOTE: assumes that the database provides results sorted by hostname!!
+        std::string current_hostname;
+        AggServer::CPUUtilisationNode* current_node;
+        const pqxx::result res = database_->GetCPUUtilInfo(start, end, condition_cols, condition_vals);
+
+        for (const auto& row : res) {
+            // Check if we need to create a new Node due to encoutnering a new hostname
+            std::string hostname = row["NodeHostname"].as<std::string>();
+            if (current_hostname != hostname) {
+                current_hostname = hostname;
+                current_node = response->add_nodes();
+                current_node->mutable_node_info()->set_hostname(hostname);
+                current_node->mutable_node_info()->set_ip(row["NodeIP"].as<std::string>());
+            }
+            auto event = current_node->add_events();
+
+            // Build Event
+            auto&& timestamp_str = row["SampleTime"].as<std::string>();
+            bool did_parse = TimeUtil::FromString(timestamp_str, event->mutable_time());
+            if (!did_parse) {
+                throw std::runtime_error("Failed to parse SampleTime field from string: "+timestamp_str);
+            }
+            event->set_cpu_utilisation(row["CPUUtilisation"].as<double>());
+
+        }
+    } catch (const std::exception& ex) {
+        std::cerr << "An exception occurred while querying CPUUtilisationEvents:" << ex.what() << std::endl;
+        throw;
+    }
+
 
     return response;
 }

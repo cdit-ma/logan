@@ -124,7 +124,7 @@ CREATE TABLE Worker
  GraphmlID       TEXT NOT NULL ,
 
 PRIMARY KEY (WorkerID),
-CONSTRAINT UniqueWorkerName UNIQUE (Name),
+CONSTRAINT UniqueWorkerNamePerRun UNIQUE (ExperimentRunID, Name),
 CONSTRAINT FK_420 FOREIGN KEY (ExperimentRunID) REFERENCES ExperimentRun (ExperimentRunID)
 );
 
@@ -164,6 +164,7 @@ CREATE TABLE Node
 
 PRIMARY KEY (NodeID),
 CONSTRAINT UniqueIP UNIQUE (IP, ExperimentRunID),
+CONSTRAINT 
 CONSTRAINT FK_360 FOREIGN KEY (ExperimentRunID) REFERENCES ExperimentRun (ExperimentRunID)
 );
 
