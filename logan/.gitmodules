@@ -1,3 +1,0 @@
-[submodule "src/client/sigar"]
-	path = src/client/sigar
-	url = https://github.com/cdit-ma/sigar
